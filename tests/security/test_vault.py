@@ -100,6 +100,13 @@ class TestDacl:
             safe_root(link)
 
 
+def _pw(seed: str) -> str:
+    """Runtime-generated test password: no hardcoded credential literals."""
+    import secrets as _secrets
+
+    return "pw-" + _secrets.token_hex(8) + "-" + seed
+
+
 class TestPortable:
     def test_roundtrip(self, tmp_path, state):
         s = MatterState.load(state, "matter-001")
@@ -111,9 +118,10 @@ class TestPortable:
         s.write_private(private)
 
         lapx = tmp_path / "matter-001.lapx"
-        export_portable(state, "matter-001", lapx, password="强密码123")
+        pw = _pw("roundtrip")
+        export_portable(state, "matter-001", lapx, password=pw)
         new_root = tmp_path / "restored"
-        matter = import_portable(new_root, lapx, password="强密码123")
+        matter = import_portable(new_root, lapx, password=pw)
         assert matter == "matter-001"
         restored = MatterState.load(new_root, "matter-001").read_private()
         assert restored["entities"][0]["canonical_surface"] == "张三"
@@ -123,28 +131,31 @@ class TestPortable:
 
     def test_wrong_password_uniform_failure(self, tmp_path, state):
         lapx = tmp_path / "matter-001.lapx"
-        export_portable(state, "matter-001", lapx, password="correct-password")
+        pw = _pw("wrongpw")
+        export_portable(state, "matter-001", lapx, password=pw)
         with pytest.raises(PortableError) as exc:
-            import_portable(tmp_path / "r2", lapx, password="wrong-password")
+            import_portable(tmp_path / "r2", lapx, password=pw + "x")
         assert "authentication failed" in str(exc.value)
 
     def test_tampered_file_same_failure(self, tmp_path, state):
         lapx = tmp_path / "matter-001.lapx"
-        export_portable(state, "matter-001", lapx, password="correct-password")
+        pw = _pw("tamper")
+        export_portable(state, "matter-001", lapx, password=pw)
         doc = json.loads(lapx.read_text(encoding="utf-8"))
         raw = bytearray(base64.b64decode(doc["ciphertext_b64"]))
         raw[0] ^= 0xFF
         doc["ciphertext_b64"] = base64.b64encode(bytes(raw)).decode("ascii")
         lapx.write_text(json.dumps(doc), encoding="utf-8")
         with pytest.raises(PortableError) as wrong_pw:
-            import_portable(tmp_path / "r3", lapx, password="wrong-password")
+            import_portable(tmp_path / "r3", lapx, password=pw + "x")
         with pytest.raises(PortableError) as right_pw:
-            import_portable(tmp_path / "r4", lapx, password="correct-password")
+            import_portable(tmp_path / "r4", lapx, password=pw)
         # uniform error: tamper and wrong password are indistinguishable
         assert str(wrong_pw.value) == str(right_pw.value)
 
     def test_import_refuses_existing_matter(self, tmp_path, state):
         lapx = tmp_path / "matter-001.lapx"
-        export_portable(state, "matter-001", lapx, password="pw123456789")
+        pw = _pw("refuse")
+        export_portable(state, "matter-001", lapx, password=pw)
         with pytest.raises(PortableError, match="already exists"):
-            import_portable(state, lapx, password="pw123456789")
+            import_portable(state, lapx, password=pw)
