@@ -15,6 +15,7 @@ import argparse
 import json
 import os
 import sys
+from pathlib import Path
 from typing import List, Optional
 
 from . import __version__, formats
@@ -104,6 +105,25 @@ def cmd_scrub(args: argparse.Namespace) -> int:
 
 def cmd_rehydrate(args: argparse.Namespace) -> int:
     payload = _read(args.infile)
+    if getattr(args, "matter", None):
+        from .application.rehydrate_service import RehydrateService
+
+        result = RehydrateService(Path(args.state_dir)).rehydrate_text(
+            args.matter, payload
+        )
+        _write(args.out or "-", result.output_text)
+        if result.unmatched_aliases:
+            print(
+                "⚠ 以下假名在输出中仍存在（可能映射不完整）: "
+                + ", ".join(result.unmatched_aliases),
+                file=sys.stderr,
+            )
+            return 6
+        print(f"已回填 {result.replacements} 处假名（matter 级）。", file=sys.stderr)
+        return EXIT_OK
+    if not args.map:
+        print("✗ rehydrate 需要 --map（legacy）或 --matter（案件级）。", file=sys.stderr)
+        return 4
     vault = Vault.load(args.map)
     try:                                   # structured reply: rehydrate in place
         obj = json.loads(payload)
@@ -172,20 +192,105 @@ def cmd_providers(_args: argparse.Namespace) -> int:
 
 
 def cmd_models(args: argparse.Namespace) -> int:
-    endpoint = args.endpoint or DEFAULT_ENDPOINT
-    models = installed_models(endpoint)
-    if not models:
-        print(f"未能从 {endpoint} 获取模型列表（Ollama 未运行？）", file=sys.stderr)
-        return EXIT_ERROR
-    print(f"{endpoint} 已安装模型：")
-    for m in models:
-        print(f"  - {m}")
-    return EXIT_OK
+    print("本工具不连接任何模型端点（S0 边界：无网络检测后端）。", file=sys.stderr)
+    print("本地 NER/OCR 模型清单见 models/manifest.json；缺失即 fail-closed。", file=sys.stderr)
+    return EXIT_ERROR
 
 
 def cmd_version(_args: argparse.Namespace) -> int:
     print(f"vault-engine {__version__}")
     return EXIT_OK
+
+
+# -- S4 matter commands --------------------------------------------------------
+
+
+def _default_state_dir() -> str:
+    base = os.environ.get("LOCALAPPDATA") or os.path.expanduser("~")
+    return os.path.join(base, "LegalAnonymizer")
+
+
+_EXIT_BY_STATUS = {
+    "AUTO_READY": 0,
+    "READY_BY_HUMAN": 0,
+    "REVIEW_REQUIRED": 2,
+    "CLOSED_BLOCK": 3,
+    "ENGINE_ERROR": 5,
+}
+
+
+def cmd_project_init(args: argparse.Namespace) -> int:
+    from .application.state import MatterState, MatterStateError
+
+    try:
+        MatterState(Path(args.state_dir), args.matter).init(args.profile)
+    except MatterStateError as exc:
+        print(f"✗ {exc}", file=sys.stderr)
+        return EXIT_ERROR
+    print(f"✓ 案件 {args.matter} 已初始化（profile={args.profile}）")
+    return EXIT_OK
+
+
+def cmd_project_status(args: argparse.Namespace) -> int:
+    from .application.state import MatterState, MatterStateError
+
+    try:
+        payload = MatterState(Path(args.state_dir), args.matter).read_public()
+    except (MatterStateError, OSError) as exc:
+        print(f"✗ {exc}", file=sys.stderr)
+        return 4
+    print(json.dumps(payload, ensure_ascii=False, indent=2))
+    return EXIT_OK
+
+
+def cmd_scan(args: argparse.Namespace) -> int:
+    from .application.scan_service import ScanError, scan
+
+    try:
+        report = scan(Path(args.input_dir), args.matter)
+    except ScanError as exc:
+        print(f"✗ {exc}", file=sys.stderr)
+        return 4
+    payload = report.to_payload()
+    if args.json:
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+    else:
+        for d in report.documents:
+            print(f"{d.document_id}  {d.format:8s} {d.size:>9d}B  {d.path}")
+    return EXIT_OK
+
+
+def cmd_sanitize(args: argparse.Namespace) -> int:
+    from .application.sanitize_service import SanitizeService
+
+    result = SanitizeService(Path(args.state_dir)).sanitize(
+        args.matter, Path(args.input_dir), Path(args.out)
+    )
+    if args.json:
+        print(json.dumps(result.receipt or {"status": result.status}, ensure_ascii=False, indent=2))
+    else:
+        print(f"状态: {result.status}")
+        for r in result.review_reasons:
+            print(f"  复核原因: {r}")
+        if result.receipt_path:
+            print(f"回执: {result.receipt_path}")
+    return result.exit_code
+
+
+def cmd_verify(args: argparse.Namespace) -> int:
+    from .application.verify_service import VerifyService
+
+    result = VerifyService(Path(args.state_dir)).verify(args.matter, Path(args.out_dir))
+    if args.json:
+        print(json.dumps(
+            {"status": result.status, "gates": result.gates,
+             "residual_counts": result.residual_counts},
+            ensure_ascii=False, indent=2))
+    else:
+        print(f"状态: {result.status}")
+        for gate, outcome in result.gates.items():
+            print(f"  {gate}: {outcome}")
+    return result.exit_code
 
 
 def _add_model_flags(p: argparse.ArgumentParser) -> None:
@@ -222,9 +327,11 @@ def build_parser() -> argparse.ArgumentParser:
     _add_model_flags(s)
     s.set_defaults(func=cmd_scrub)
 
-    r = sub.add_parser("rehydrate", help="用映射把云端回复里的代号还原成真实身份")
+    r = sub.add_parser("rehydrate", help="回填：映射文件（legacy）或案件状态（--matter）二选一")
     r.add_argument("infile", help="云端回复（- 表示 stdin）")
-    r.add_argument("--map", required=True, help="scrub 时产出的 *.map.json")
+    r.add_argument("--map", default=None, help="legacy: scrub 时产出的 *.map.json")
+    r.add_argument("--matter", default=None, help="matter 级回填：使用案件私有状态")
+    r.add_argument("--state-dir", default=_default_state_dir())
     r.add_argument("-o", "--out", help="输出路径（默认 stdout）")
     r.set_defaults(func=cmd_rehydrate)
 
@@ -251,6 +358,44 @@ def build_parser() -> argparse.ArgumentParser:
     m.set_defaults(func=cmd_models)
 
     sub.add_parser("version", help="打印版本").set_defaults(func=cmd_version)
+
+    # -- S4 matter commands ----------------------------------------------------
+
+    p = sub.add_parser("project", help="案件项目管理（init/status）")
+    p_sub = p.add_subparsers(dest="project_command", required=True)
+    pi = p_sub.add_parser("init", help="初始化案件状态")
+    pi.add_argument("--matter", required=True)
+    pi.add_argument("--profile", default="cn-ai-safe-v1")
+    pi.add_argument("--state-dir", default=_default_state_dir())
+    pi.set_defaults(func=cmd_project_init)
+    ps = p_sub.add_parser("status", help="查看案件状态")
+    ps.add_argument("--matter", required=True)
+    ps.add_argument("--state-dir", default=_default_state_dir())
+    ps.set_defaults(func=cmd_project_status)
+
+    sc = sub.add_parser("scan", help="扫描材料目录并分配 doc-xxx 稳定编号")
+    sc.add_argument("input_dir")
+    sc.add_argument("--matter", required=True)
+    sc.add_argument("--state-dir", default=_default_state_dir())
+    sc.add_argument("--json", action="store_true", help="稳定 JSON 输出")
+    sc.set_defaults(func=cmd_scan)
+
+    sa = sub.add_parser("sanitize", help="案件级脱敏：识别→归并→假名化→报告→签名回执")
+    sa.add_argument("input_dir")
+    sa.add_argument("--matter", required=True)
+    sa.add_argument("--out", required=True)
+    sa.add_argument("--profile", default=None, help="仅当与 project init 不同时报错拦截")
+    sa.add_argument("--state-dir", default=_default_state_dir())
+    sa.add_argument("--json", action="store_true")
+    sa.set_defaults(func=cmd_sanitize)
+
+    ve = sub.add_parser("verify", help="独立验收：隐私/完整性/效用 Gate + 签名验收回执")
+    ve.add_argument("out_dir")
+    ve.add_argument("--matter", required=True)
+    ve.add_argument("--state-dir", default=_default_state_dir())
+    ve.add_argument("--json", action="store_true")
+    ve.set_defaults(func=cmd_verify)
+
     return parser
 
 

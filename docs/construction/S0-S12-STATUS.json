@@ -156,6 +156,40 @@
             "Person/Org recall relies on rules + structure labels + user dictionary until a qualified offline NER is added; every affected document is REVIEW_REQUIRED unless dictionary-confirmed."
           ],
           "notes": "Deterministic CN rules with checksum validation (ID18/GB32100 USCC/Luhn) and per-rule positives/negatives; money/date classification-only; structure label recognizer; project dictionary (blacklist/whitelist/alias groups); registry with deterministic overlap resolution (longest, severity, rule id); optional Presidio adapter behind an extra; recognizer.yaml single rule source; model manifest with honest unqualified NER/OCR state."
+        },
+        {
+          "wave": "S4",
+          "status": "COMPLETED_LOCAL",
+          "checks": [
+            {
+              "command": "python -m pytest tests/markdown -q",
+              "outcome": "PASS",
+              "detail": "10 passed (9 E2E + CLI flow)"
+            },
+            {
+              "command": "python -m pytest tests/ -q",
+              "outcome": "PASS",
+              "detail": "144 passed (full regression)"
+            },
+            {
+              "command": "python tools/verify_no_raw_fixtures.py",
+              "outcome": "PASS"
+            },
+            {
+              "command": "python tools/verify_no_network_provider.py",
+              "outcome": "PASS"
+            },
+            {
+              "command": "git diff --check",
+              "outcome": "PASS"
+            }
+          ],
+          "external_blockers": [],
+          "remaining_risks": [
+            "Matter private state uses the sanctioned INSECURE-TEST-SEAM until S8 installs DPAPI.",
+            "DOCX/PDF formats still pending (S5-S7); scan only supports md/txt."
+          ],
+          "notes": "Full Markdown/Text main chain: scan (stable doc-xxx ids, sha256 snapshot), registry+dictionary recognition, MSSP resolution, typed transforms, end-to-start replacement, AI_INSTRUCTION_LIKE_CONTENT flagging (never deletion), matter-level signed receipt, independent verify service (fresh rule engine, surface residue, completeness, money/date multisets) with signed privacy-verification receipt, strict rehydrate. CLI: project init/status, scan, sanitize, verify, matter-mode rehydrate; exit codes 0/2/3/4/5/6. Honesty rule: without qualified NER, AUTO_READY requires a user dictionary covering subjects; otherwise REVIEW_REQUIRED."
         }
       ]
     }
