@@ -101,6 +101,21 @@ def issue_review_receipt(
     out.write_text(
         json.dumps(signed, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
+
+    # the sanitization receipt is re-issued at READY_BY_HUMAN with the review
+    # receipt embedded, so bundles bind the full accountability chain
+    src_receipt_path = Path(out_dir) / "receipts" / "sanitization-receipt.json"
+    if src_receipt_path.exists():
+        src_receipt = json.loads(src_receipt_path.read_text(encoding="utf-8"))
+        src_receipt["status"] = SanitizationStatus.READY_BY_HUMAN.value
+        src_receipt["review"] = signed
+        src_receipt["signature"] = identity.sign(
+            {k: v for k, v in src_receipt.items() if k != "signature"}
+        )
+        src_receipt_path.write_text(
+            json.dumps(src_receipt, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        )
+
     # decisions persist into private state (DPAPI), not into public artifacts
     private = state.read_private()
     private.setdefault("decisions", []).append(

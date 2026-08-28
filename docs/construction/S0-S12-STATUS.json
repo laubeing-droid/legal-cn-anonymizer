@@ -367,6 +367,40 @@
             "Benchmark Person/Org recall is measured against the dictionary baseline only; NER recall numbers remain unclaimed until a qualified offline model exists."
           ],
           "notes": "Independent acceptance closed loop: signed human-review receipts (bind matter/report/bundle/reviewer/decisions/single-use), READY_BY_HUMAN only via valid receipt binding the CURRENT artifact set; stale-receipt and planted-residual scenarios enforced by verify (output_hash_mismatch, critical_identifier_residual); receipt binding detects any artifact change; matter-level review flag monotonic across document pipelines; CLI review command; synthetic benchmark (5-doc corpus, fully synthetic surfaces) with mechanical metrics and honest NER reporting; no SAFE/100% ANONYMIZED wording in outputs."
+        },
+        {
+          "wave": "S10",
+          "status": "COMPLETED_LOCAL",
+          "checks": [
+            {
+              "command": "python -m pytest tests/consumer -q",
+              "outcome": "PASS",
+              "detail": "6 passed"
+            },
+            {
+              "command": "python -m pytest tests/ -q",
+              "outcome": "PASS",
+              "detail": "196 passed (full regression)"
+            },
+            {
+              "command": "git diff --check",
+              "outcome": "PASS"
+            },
+            {
+              "command": "tripwires (raw fixtures / network / private schema fields)",
+              "outcome": "PASS"
+            }
+          ],
+          "external_blockers": [
+            {
+              "blocker": "CLOSED_BLOCK_EXTERNAL/harness_internal_import",
+              "detail": "legal-harness-repo internal protocol import, MatterStore registration and Broker hard gate belong to the separate Harness construction plan; this wave only produces the signed handoff package and proves it with a mock consumer."
+            }
+          ],
+          "remaining_risks": [
+            "The mock consumer proves protocol closure only; no real consumer has imported a bundle."
+          ],
+          "notes": "Consumer protocol pack (schemas exact copies incl. consumer-contract-manifest-v1, signed examples auto-ready/ready-by-human/blocked, 6 negative fixtures with stable rejection codes, public key, signed contract manifest, SHA256SUMS, README); Legal Harness handoff export (sanitized artifacts with stable names, Party/MatterProfile structured objects from the SAME entity vault, material-input.json, signed sanitization receipt + bundle, private-field exclusion fail-closed); mock consumer with 9 stable checks (unknown signer, bad signature, schema mismatch, unknown field, mapping in bundle, stale receipt, artifact hash mismatch, missing review, blocked status); CLI bundle consumer-protocol / bundle legal-harness / verify-consumer-bundle; no access to legal-harness-repo internals, no fabricated Harness evidence."
         }
       ]
     }

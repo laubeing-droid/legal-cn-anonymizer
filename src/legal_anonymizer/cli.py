@@ -387,6 +387,39 @@ def cmd_review_issue(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+def cmd_bundle_consumer_protocol(args: argparse.Namespace) -> int:
+    from .application.consumer_protocol import build_consumer_protocol
+
+    result = build_consumer_protocol(Path(args.state_dir), Path(args.out))
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    return EXIT_OK
+
+
+def cmd_bundle_harness(args: argparse.Namespace) -> int:
+    from .application.consumer_bundle_service import build_harness_handoff
+
+    try:
+        result = build_harness_handoff(
+            Path(args.state_dir), args.matter, Path(args.out),
+            source_dir=Path(args.source_out) if args.source_out else None,
+        )
+    except Exception as exc:  # noqa: BLE001 - HandoffError/ReviewError/MatterStateError
+        print(f"✗ {exc}", file=sys.stderr)
+        return 3
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    return EXIT_OK
+
+
+def cmd_verify_consumer_bundle(args: argparse.Namespace) -> int:
+    from tests.consumer.mock_consumer import verify_consumer_bundle
+
+    ok, reason = verify_consumer_bundle(
+        Path(args.bundle_dir), Path(args.protocol_dir) if args.protocol_dir else None
+    )
+    print(json.dumps({"result": ok, "reason": reason}, ensure_ascii=False, indent=2))
+    return 0 if ok == "ACCEPTABLE_FOR_IMPORT" else 3
+
+
 def cmd_verify(args: argparse.Namespace) -> int:
     from .application.verify_service import VerifyService
 
@@ -526,6 +559,24 @@ def build_parser() -> argparse.ArgumentParser:
                     choices=["UPLOADING_LAWYER", "MATTER_LEAD", "DESIGNATED_REVIEWER"])
     rv.add_argument("--json", action="store_true")
     rv.set_defaults(func=cmd_review_issue)
+
+    bl = sub.add_parser("bundle", help="生成交付包（consumer-protocol / legal-harness）")
+    bl_sub = bl.add_subparsers(dest="bundle_command", required=True)
+    bc = bl_sub.add_parser("consumer-protocol", help="生成外部消费者协议包")
+    bc.add_argument("--out", required=True)
+    bc.add_argument("--state-dir", default=_default_state_dir())
+    bc.set_defaults(func=cmd_bundle_consumer_protocol)
+    bh = bl_sub.add_parser("legal-harness", help="生成 Legal Harness 交接包（仅脱敏器侧）")
+    bh.add_argument("--matter", required=True)
+    bh.add_argument("--out", required=True)
+    bh.add_argument("--source-out", help="sanitize 输出目录（含 receipts/sanitized）")
+    bh.add_argument("--state-dir", default=_default_state_dir())
+    bh.set_defaults(func=cmd_bundle_harness)
+
+    vb = sub.add_parser("verify-consumer-bundle", help="离线校验交接包（内置模拟消费者逻辑）")
+    vb.add_argument("bundle_dir")
+    vb.add_argument("--protocol-dir", help="consumer protocol 包根目录")
+    vb.set_defaults(func=cmd_verify_consumer_bundle)
 
     return parser
 

@@ -310,9 +310,51 @@ SCHEMAS["sanitized-bundle-v1"] = obj(
         },
         "receipt_hash": HASH,
         "structured_objects": {"type": "array", "items": {"type": "object"}},
+        "signature": sig_block(),
     },
     ["matter_id", "profile_id", "created_at", "status", "artifacts", "receipt_hash"],
     "Public sanitized bundle descriptor. Mapping and private fields are forbidden.",
+)
+
+SCHEMAS["consumer-contract-manifest-v1"] = obj(
+    "consumer-contract-manifest-v1",
+    {
+        "source_repository": {"type": "string"},
+        "source_commit_note": {"type": "string"},
+        "package_version": {"type": "string"},
+        "provider_id": {"type": "string"},
+        "provider_build_digest": {"type": "string"},
+        "signer": {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["key_id", "fingerprint", "algorithm"],
+            "properties": {
+                "key_id": {"type": "string", "pattern": "^[0-9a-f]{16}$"},
+                "fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+                "algorithm": {"const": "Ed25519"},
+            },
+        },
+        "profile_ids": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+        "canonical_serialization_profile": {"type": "object"},
+        "required_invariants": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+        "schemas": {
+            "type": "object",
+            "additionalProperties": {
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["sha256", "canonical_copy"],
+                "properties": {
+                    "sha256": SHA256HEX,
+                    "canonical_copy": {"const": True},
+                },
+            },
+        },
+        "fixture_hashes": {"type": "object"},
+        "signature": sig_block(),
+    },
+    ["source_repository", "provider_id", "provider_build_digest", "signer", "profile_ids",
+     "canonical_serialization_profile", "required_invariants", "schemas"],
+    "Binding contract between the anonymizer and its external consumers.",
 )
 
 SCHEMAS["mapping-envelope-v1"] = obj(

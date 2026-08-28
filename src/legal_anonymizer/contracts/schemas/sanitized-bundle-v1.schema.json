@@ -71,6 +71,28 @@
       "items": {
         "type": "object"
       }
+    },
+    "signature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "algorithm",
+        "key_id",
+        "signature"
+      ],
+      "properties": {
+        "algorithm": {
+          "const": "Ed25519"
+        },
+        "key_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{16}$"
+        },
+        "signature": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9+/]+=*$"
+        }
+      }
     }
   },
   "description": "Public sanitized bundle descriptor. Mapping and private fields are forbidden."

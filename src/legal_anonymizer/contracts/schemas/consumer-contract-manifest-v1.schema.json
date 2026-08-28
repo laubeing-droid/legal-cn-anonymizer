@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-cn-anonymizer.local/schemas/consumer-contract-manifest-v1.schema.json",
+  "title": "consumer-contract-manifest-v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "source_repository",
+    "provider_id",
+    "provider_build_digest",
+    "signer",
+    "profile_ids",
+    "canonical_serialization_profile",
+    "required_invariants",
+    "schemas"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "source_repository": {
+      "type": "string"
+    },
+    "source_commit_note": {
+      "type": "string"
+    },
+    "package_version": {
+      "type": "string"
+    },
+    "provider_id": {
+      "type": "string"
+    },
+    "provider_build_digest": {
+      "type": "string"
+    },
+    "signer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key_id",
+        "fingerprint",
+        "algorithm"
+      ],
+      "properties": {
+        "key_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{16}$"
+        },
+        "fingerprint": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "algorithm": {
+          "const": "Ed25519"
+        }
+      }
+    },
+    "profile_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
+    },
+    "canonical_serialization_profile": {
+      "type": "object"
+    },
+    "required_invariants": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
+    },
+    "schemas": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sha256",
+          "canonical_copy"
+        ],
+        "properties": {
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "canonical_copy": {
+            "const": true
+          }
+        }
+      }
+    },
+    "fixture_hashes": {
+      "type": "object"
+    },
+    "signature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "algorithm",
+        "key_id",
+        "signature"
+      ],
+      "properties": {
+        "algorithm": {
+          "const": "Ed25519"
+        },
+        "key_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{16}$"
+        },
+        "signature": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9+/]+=*$"
+        }
+      }
+    }
+  },
+  "description": "Binding contract between the anonymizer and its external consumers."
+}
