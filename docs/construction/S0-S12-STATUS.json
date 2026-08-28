@@ -113,6 +113,49 @@
             "Weak-alias merging (RapidFuzz scoring) arrives with S3 recognizers; current weak candidates go to review only."
           ],
           "notes": "MSSP core: Mention/Locator/Span with end-to-start replacement and overlap rejection; typed normalization (person/org/phone/id/address/OCR-fold); constrained union-find (must-link via strong identifiers and normalized surface, cannot-link with group-aware conflict detection, weak candidates review-only); deterministic entity IDs (type, first doc, offset, surface HMAC) independent of detector order; display aliases separate from IDs; typed transforms (pseudonymize/mask/year/address generalize/physical redact); money+legal-date multiset snapshots; closed ai-safe/publish profiles that refuse unconfigured types."
+        },
+        {
+          "wave": "S3",
+          "status": "COMPLETED_LOCAL",
+          "external_blockers": [
+            {
+              "blocker": "CLOSED_BLOCK_EXTERNAL/ner_model_distribution",
+              "detail": "HanLP / PaddleNLP-UIE / BERT-ONNX candidates could not be evaluated offline: no hash-locked model files are available in the construction environment and runtime download is forbidden. Real fail-closed path implemented: models/manifest.json ner.qualified=false; documents whose subject mentions are not user-dictionary-confirmed default to REVIEW_REQUIRED; no recall numbers advertised. tools/ner_bakeoff.py exits 2 to surface the blocker."
+            }
+          ],
+          "checks": [
+            {
+              "command": "python -m pytest tests/recognizers -q",
+              "outcome": "PASS",
+              "detail": "21 passed"
+            },
+            {
+              "command": "python -m pytest tests/ (full regression)",
+              "outcome": "PASS",
+              "detail": "134 passed"
+            },
+            {
+              "command": "python tools/ner_bakeoff.py",
+              "outcome": "CLOSED_BLOCK_EXTERNAL",
+              "detail": "exit 2, honest blocker report"
+            },
+            {
+              "command": "python tools/verify_no_raw_fixtures.py",
+              "outcome": "PASS"
+            },
+            {
+              "command": "python tools/verify_no_network_provider.py",
+              "outcome": "PASS"
+            },
+            {
+              "command": "git diff --check",
+              "outcome": "PASS"
+            }
+          ],
+          "remaining_risks": [
+            "Person/Org recall relies on rules + structure labels + user dictionary until a qualified offline NER is added; every affected document is REVIEW_REQUIRED unless dictionary-confirmed."
+          ],
+          "notes": "Deterministic CN rules with checksum validation (ID18/GB32100 USCC/Luhn) and per-rule positives/negatives; money/date classification-only; structure label recognizer; project dictionary (blacklist/whitelist/alias groups); registry with deterministic overlap resolution (longest, severity, rule id); optional Presidio adapter behind an extra; recognizer.yaml single rule source; model manifest with honest unqualified NER/OCR state."
         }
       ]
     }

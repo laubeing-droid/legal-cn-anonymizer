@@ -1,0 +1,38 @@
+{
+  "manifest_version": "1.0",
+  "note": "Offline model lock. Models may never be downloaded at runtime; a missing or unqualified model degrades to REVIEW_REQUIRED, never to silent pass.",
+  "models": [],
+  "ner": {
+    "qualified": false,
+    "auto_release_qualified": false,
+    "evaluated_candidates": [
+      {
+        "model_id": "hanlp-local-small",
+        "status": "NOT_EVALUATED",
+        "reason": "CLOSED_BLOCK_EXTERNAL: no offline model distribution available in the construction environment; evaluation and license/redistribution review must run where models can be fetched and hash-locked."
+      },
+      {
+        "model_id": "paddlenlp-uie-small",
+        "status": "NOT_EVALUATED",
+        "reason": "CLOSED_BLOCK_EXTERNAL: same external condition as hanlp-local-small."
+      },
+      {
+        "model_id": "bert-ner-onnx",
+        "status": "NOT_EVALUATED",
+        "reason": "CLOSED_BLOCK_EXTERNAL: same external condition as hanlp-local-small."
+      }
+    ],
+    "thresholds": {
+      "direct_identifier_miss_rate_max": 0.01,
+      "person_org_mention_recall_min": 0.99,
+      "per_class_minimum_enforced": true
+    },
+    "degrade_behavior": "When unqualified, documents whose subject mentions are not user-dictionary-confirmed default to REVIEW_REQUIRED (LOW_CONFIDENCE). No recall number is advertised."
+  },
+  "ocr": {
+    "engine": "rapidocr-onnx",
+    "qualified": false,
+    "status": "PENDING_S7",
+    "reason": "Model files must be hash-locked into models/ with redistribution license recorded before qualification."
+  }
+}

@@ -1,0 +1,33 @@
+# Recognizer configuration for the Chinese legal profile (cn-ai-safe-v1).
+# Single YAML rule source: the Python engine and the Presidio adapter both read
+# their behavior from the same rule registry; this file pins severity and
+# classification-only behavior for money/date.
+
+schema_version: "1.0"
+profile_id: cn-ai-safe-v1
+
+rules:
+  cn.id.18:            {enabled: true, severity: critical, transform: MASK_KEEP_LAST_4}
+  cn.phone.mobile:     {enabled: true, severity: critical, transform: MASK_KEEP_LAST_4}
+  cn.phone.landline:   {enabled: true, severity: critical, transform: MASK_KEEP_LAST_4}
+  cn.email:            {enabled: true, severity: critical, transform: PSEUDONYMIZE}
+  cn.credit.uscc:      {enabled: true, severity: critical, transform: PSEUDONYMIZE}
+  cn.bank.card:        {enabled: true, severity: critical, transform: MASK_KEEP_LAST_4}
+  cn.weixin:           {enabled: true, severity: critical, transform: PSEUDONYMIZE}
+  cn.plate:            {enabled: true, severity: high, transform: MASK_KEEP_LAST_4}
+  cn.case.number:      {enabled: true, severity: high, transform: PSEUDONYMIZE}
+  cn.url:              {enabled: true, severity: high, transform: PSEUDONYMIZE}
+  cn.ip.v4:            {enabled: true, severity: high, transform: MASK_KEEP_LAST_4}
+  cn.money.classify:   {enabled: true, severity: normal, transform: KEEP, classification_only: true}
+  cn.date.classify:    {enabled: true, severity: normal, transform: KEEP, classification_only: true}
+
+structure_labels:
+  法定代表人: PERSON
+  委托代理人: PERSON
+  联系人: PERSON
+  住所地: LOCATION
+  工程地址: LOCATION
+
+classification_only:
+  - MONEY
+  - LEGAL_DATE
