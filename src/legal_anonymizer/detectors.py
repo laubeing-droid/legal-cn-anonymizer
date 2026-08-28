@@ -5,7 +5,7 @@ emails, phone numbers, URLs, handles, IP/MAC, government IDs, payment cards
 (Luhn-checked), crypto addresses. They run with or without a model and give the
 pipeline a reliable floor of coverage.
 
-Every detector returns offset-anchored :class:`~vaultengine.spans.Span` objects,
+Every detector returns offset-anchored :class:`~legal_anonymizer.spans.Span` objects,
 so overlaps are resolved deterministically by ``spans.merge_overlapping``.
 """
 

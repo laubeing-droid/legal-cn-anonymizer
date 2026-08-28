@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
 
-from vaultengine import cli
+from legal_anonymizer import cli
 
 PII_TEXT = "联系 zhang.san@example.com 或 13900001111，证件 11010119900307391X。"
 
@@ -76,8 +76,7 @@ class CliTests(unittest.TestCase):
     def test_providers_lists_builtins(self):
         code, out, _ = run(["providers"])
         self.assertEqual(code, 0)
-        self.assertIn("ollama", out)
-        self.assertIn("openai-compat", out)
+        self.assertIn("null", out)  # S0: network providers removed; null is the only builtin
 
     def test_version(self):
         code, out, _ = run(["version"])

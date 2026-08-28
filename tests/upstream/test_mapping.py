@@ -1,8 +1,8 @@
 import unittest
 
-from vaultengine import config as cfg
-from vaultengine.mapping import Vault, is_token_like
-from vaultengine.spans import (CAT_DATE, CAT_ID, CAT_ORG, CAT_PERSON, Span)
+from legal_anonymizer import config as cfg
+from legal_anonymizer.mapping import Vault, is_token_like
+from legal_anonymizer.spans import (CAT_DATE, CAT_ID, CAT_ORG, CAT_PERSON, Span)
 
 
 class MappingTests(unittest.TestCase):

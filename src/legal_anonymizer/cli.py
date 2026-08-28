@@ -22,7 +22,6 @@ from .config import POLICIES, Config
 from .mapping import Vault
 from .pipeline import deidentify, rehydrate
 from .providers import available
-from .providers.ollama import DEFAULT_ENDPOINT, installed_models
 
 EXIT_OK = 0
 EXIT_ERROR = 1
@@ -165,8 +164,7 @@ def cmd_clip(args: argparse.Namespace) -> int:
 
 def cmd_providers(_args: argparse.Namespace) -> int:
     print("可用 provider：")
-    notes = {"ollama": "本地 Ollama（默认，原文不出本机）",
-             "openai-compat": "OpenAI 兼容端点（⚠️ 原文会出本机，默认不用）",
+    notes = {"null": "离线确定性检测（默认，无网络路径）",
              "null": "纯正则离线（无模型，仅兜底）"}
     for name in available():
         print(f"  - {name:14s} {notes.get(name, '')}")
@@ -191,7 +189,7 @@ def cmd_version(_args: argparse.Namespace) -> int:
 
 
 def _add_model_flags(p: argparse.ArgumentParser) -> None:
-    p.add_argument("--provider", help="ollama(默认) / openai-compat / null")
+    p.add_argument("--provider", help="null(默认；本工具不提供网络检测后端)")
     p.add_argument("--model", help="模型 tag，默认 qwen3.6:27b")
     p.add_argument("--endpoint", help="provider 端点 URL")
     p.add_argument("--api-key", dest="api_key", help="远程端点的 API key")

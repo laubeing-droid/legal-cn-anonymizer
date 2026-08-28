@@ -10,9 +10,9 @@ from __future__ import annotations
 
 from typing import Dict, List
 
-from vaultengine.config import Config
-from vaultengine.providers.base import Provider, ProviderError
-from vaultengine.spans import (CAT_LOCATION, CAT_ORG, CAT_PERSON, CAT_ROLE, Span)
+from legal_anonymizer.config import Config
+from legal_anonymizer.providers.base import Provider, ProviderError
+from legal_anonymizer.spans import (CAT_LOCATION, CAT_ORG, CAT_PERSON, CAT_ROLE, Span)
 
 # All synthetic. None of this is real data.
 PEOPLE = {"张三": ["小张"], "李四": [], "老王": []}

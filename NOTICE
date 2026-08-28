@@ -1,6 +1,16 @@
-vault-engine
-Copyright 2026 fishonbike
+legal-cn-anonymizer
+Copyright 2026 legal-cn-anonymizer contributors
+
+Copyright 2026 fishonbike (vault-engine, upstream skeleton, Apache-2.0)
 
 Licensed under the Apache License, Version 2.0 (see LICENSE).
 
-This product includes software developed by fishonbike.
+This product includes software developed by fishonbike as vault-engine
+(https://github.com/fishonbike/vault-engine), and includes concepts ported from
+the projects listed in THIRD_PARTY_NOTICES.md.
+
+This product is an auxiliary local facility for the cloud-model stage of legal
+work. It makes no claim of complete anonymization and never outputs a
+"SAFE" / "100% ANONYMIZED" verdict. Sanitized outputs always carry explicit
+status: AUTO_READY, REVIEW_REQUIRED, READY_BY_HUMAN, CLOSED_BLOCK or
+ENGINE_ERROR.

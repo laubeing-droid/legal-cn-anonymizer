@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import json
 
-from vaultengine import Config, deidentify, rehydrate
+from legal_anonymizer import Config, deidentify, rehydrate
 
 TEXT = (
     "苏曼在「云图科技」负责增长，邮箱 grow@yuntu.example，手机 13700001234。\n"

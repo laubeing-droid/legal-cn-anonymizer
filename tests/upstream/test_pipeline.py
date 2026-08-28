@@ -1,8 +1,8 @@
 import unittest
 
-from vaultengine import config as cfg
-from vaultengine.pipeline import deidentify
-from vaultengine.providers.base import Provider
+from legal_anonymizer import config as cfg
+from legal_anonymizer.pipeline import deidentify
+from legal_anonymizer.providers.base import Provider
 
 from .fakes import FakeProvider, RaisingProvider, fake_config
 

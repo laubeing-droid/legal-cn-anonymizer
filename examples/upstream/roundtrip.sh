@@ -15,7 +15,7 @@ cat > "$tmp/notes.txt" <<'EOF'
 EOF
 
 echo "== 1. scrub (de-identify) =="
-"$PY" -m vaultengine scrub "$tmp/notes.txt" -o "$tmp/out.txt" --no-llm
+"$PY" -m legal_anonymizer scrub "$tmp/notes.txt" -o "$tmp/out.txt" --no-llm
 
 echo "== 2. sanitized text (safe to send to the cloud) =="
 cat "$tmp/out.txt"; echo
@@ -30,5 +30,5 @@ printf '{"insight": "%s 值得继续跟进"}\n' "$tok" > "$tmp/reply.json"
 cat "$tmp/reply.json"
 
 echo "== 4. rehydrate (real identities restored, locally) =="
-"$PY" -m vaultengine rehydrate "$tmp/reply.json" --map "$tmp/out.txt.map.json"
+"$PY" -m legal_anonymizer rehydrate "$tmp/reply.json" --map "$tmp/out.txt.map.json"
 echo

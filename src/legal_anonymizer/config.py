@@ -20,7 +20,7 @@ POLICY_LIGHT = "light"        # only persons + explicit PII; context untouched
 POLICIES = (POLICY_BALANCED, POLICY_MAX, POLICY_LIGHT)
 
 DEFAULT_MODEL = "qwen3.6:27b"   # the de-identification model, runtime-swappable
-DEFAULT_PROVIDER = "ollama"
+DEFAULT_PROVIDER = "null"  # local-only by construction; network providers removed at S0
 
 
 @dataclass
@@ -28,7 +28,7 @@ class Config:
     provider: str = DEFAULT_PROVIDER
     model: str = DEFAULT_MODEL
     endpoint: str = ""          # provider default used when empty
-    api_key: str = ""           # only for remote (openai-compat) providers
+    api_key: str = ""           # reserved; remote providers were removed at S0
     policy: str = POLICY_BALANCED
     locale: str = "zh"          # selects regex sets / prompt language
 

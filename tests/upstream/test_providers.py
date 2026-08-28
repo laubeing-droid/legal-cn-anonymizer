@@ -1,8 +1,8 @@
 import unittest
 
-from vaultengine.config import Config
-from vaultengine.providers import available, get_provider
-from vaultengine.providers.base import Provider, parse_json_array
+from legal_anonymizer.config import Config
+from legal_anonymizer.providers import available, get_provider
+from legal_anonymizer.providers.base import Provider, parse_json_array
 
 
 class CannedProvider(Provider):
@@ -58,7 +58,7 @@ class BaseDetectTests(unittest.TestCase):
 
 class RegistryTests(unittest.TestCase):
     def test_builtins_registered(self):
-        for name in ("ollama", "openai-compat", "null"):
+        for name in ("null",):
             self.assertIn(name, available())
 
     def test_get_unknown_raises(self):

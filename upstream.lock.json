@@ -1,0 +1,85 @@
+{
+  "lock_version": 1,
+  "locked_on": "2026-08-29",
+  "note": "Upstream audit snapshot for the S0-S12 construction. Do not silently follow upstream HEAD.",
+  "upstreams": [
+    {
+      "repository": "fishonbike/vault-engine",
+      "commit": "24afa4d84dc1ad39945404b5d3f05b63056adba5",
+      "license": "Apache-2.0",
+      "usage": "fork-history; base skeleton of legal_anonymizer package"
+    },
+    {
+      "repository": "data-privacy-stack/presidio",
+      "commit": "eb93051b60b7daa44b4b8b1acdcce60522bacc8a",
+      "license": "Apache-2.0",
+      "usage": "recognizer registry / pattern / context / checksum / operator concepts (optional extra)"
+    },
+    {
+      "repository": "RapidAI/RapidOCR",
+      "commit": "e7edb012372f9ec5cf9e38a1e1e7b6abd489a2e7",
+      "license": "Apache-2.0",
+      "usage": "local Chinese OCR via ONNX CPU; OCR model copyrights tracked separately in models/manifest.json"
+    },
+    {
+      "repository": "pypdfium2-team/pypdfium2",
+      "commit": "92802b251ee7beae8b6fece1284aebf2f52e9c30",
+      "license": "Apache-2.0 / BSD-3-Clause",
+      "usage": "PDF render/read/attachment checks"
+    },
+    {
+      "repository": "microsoft/markitdown",
+      "commit": "9dc0d6579b8739c9d0671ff205e071e3053c7df1",
+      "license": "MIT",
+      "usage": "post-sanitization AI markdown auxiliary conversion only"
+    },
+    {
+      "repository": "zhendong/safe-redact",
+      "commit": "47b7c428c5e3456d7633610004d77296b07072ce",
+      "license": "MIT",
+      "usage": "DOCX/PDF hidden-content cleanup checklist reference"
+    },
+    {
+      "repository": "moyupeng0422/legal-doc-redactor",
+      "commit": "927d5181835c40e70f82e02a1048cfe6ead6dfe1",
+      "license": "MIT",
+      "usage": "Chinese legal regex seeds, cross-run replacement and restore experience"
+    },
+    {
+      "repository": "rapidfuzz/RapidFuzz",
+      "commit": "locked-at-install",
+      "license": "MIT",
+      "usage": "alias candidate similarity"
+    },
+    {
+      "repository": "mhammond/pywin32",
+      "commit": "locked-at-install",
+      "license": "PSF-2.0",
+      "usage": "Windows DPAPI"
+    },
+    {
+      "repository": "pyca/cryptography",
+      "commit": "locked-at-install",
+      "license": "Apache-2.0 / BSD-3-Clause",
+      "usage": "Ed25519, Scrypt, AES-GCM"
+    },
+    {
+      "repository": "zxing-cpp/zxing-cpp",
+      "commit": "locked-at-install",
+      "license": "Apache-2.0",
+      "usage": "QR/DataMatrix/PDF417 decoding"
+    },
+    {
+      "repository": "laubeing-droid/juris-calculus",
+      "commit": "9ecb66c613e502b0111cc485b6bf255bfeacad57",
+      "license": "see repo LICENSE",
+      "usage": "JC V4 consumer baseline"
+    }
+  ],
+  "excluded": [
+    {
+      "repository": "pymupdf/PyMuPDF",
+      "reason": "AGPL default; excluded from distribution dependencies and not vendored"
+    }
+  ]
+}

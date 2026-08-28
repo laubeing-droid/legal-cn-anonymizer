@@ -1,4 +1,4 @@
-"""``python -m vaultengine`` entry point."""
+"""``python -m legal_anonymizer`` entry point."""
 
 from __future__ import annotations
 

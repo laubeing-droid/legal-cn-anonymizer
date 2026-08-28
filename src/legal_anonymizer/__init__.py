@@ -3,7 +3,7 @@
 De-identify text before it goes to a cloud model, with a swappable local model
 doing the detection and a reversible map kept on your machine.
 
-    from vaultengine import deidentify, rehydrate, Config
+    from legal_anonymizer import deidentify, rehydrate, Config
 
     result = deidentify(open("notes.txt").read(), Config(policy="balanced"))
     send_to_cloud(result.text)          # tokens only — no real identities

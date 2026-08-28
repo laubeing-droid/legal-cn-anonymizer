@@ -6,7 +6,7 @@ import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from unittest import mock
 
-from vaultengine import cli
+from legal_anonymizer import cli
 
 # Real clipboard I/O (pbcopy/pbpaste etc.) is replaced with fakes so the test is
 # deterministic and runs in CI — it exercises the `clip` command's logic, not the
@@ -24,8 +24,8 @@ def run_clip(argv, clipboard_text):
         written["text"] = text
 
     out, err = io.StringIO(), io.StringIO()
-    with mock.patch("vaultengine.clipboard.read_clipboard", fake_read), \
-         mock.patch("vaultengine.clipboard.write_clipboard", fake_write), \
+    with mock.patch("legal_anonymizer.clipboard.read_clipboard", fake_read), \
+         mock.patch("legal_anonymizer.clipboard.write_clipboard", fake_write), \
          redirect_stdout(out), redirect_stderr(err):
         code = cli.main(argv)
     return code, written.get("text"), err.getvalue()

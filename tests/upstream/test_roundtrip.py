@@ -2,8 +2,8 @@ import json
 import os
 import unittest
 
-from vaultengine import formats
-from vaultengine.pipeline import deidentify, rehydrate
+from legal_anonymizer import formats
+from legal_anonymizer.pipeline import deidentify, rehydrate
 
 from .fakes import FakeProvider, fake_config
 

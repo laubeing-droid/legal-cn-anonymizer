@@ -1,7 +1,7 @@
 import unittest
 
-from vaultengine.detectors import _luhn_ok, detect
-from vaultengine.spans import CAT_CONTACT, CAT_ID
+from legal_anonymizer.detectors import _luhn_ok, detect
+from legal_anonymizer.spans import CAT_CONTACT, CAT_ID
 
 
 def kinds(text):

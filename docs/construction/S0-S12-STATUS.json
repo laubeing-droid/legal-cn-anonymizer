@@ -1,0 +1,55 @@
+{
+  "construction": "S0-S12",
+  "plan_document": "20260828_法律材料本地脱敏系统_S0-S12一次性全量施工总方案_v2.1_脱离Harness生产改造.md",
+  "plan_version": "v2.1",
+  "started_on": "2026-08-29",
+  "repos": {
+    "legal-cn-anonymizer": {
+      "baseline_commit": "24afa4d84dc1ad39945404b5d3f05b63056adba5",
+      "baseline_note": "Upstream fishonbike/vault-engine HEAD equals the pinned snapshot commit; no rebase needed.",
+      "branch": "feat/s0-s12-local-egress",
+      "waves": [
+        {
+          "wave": "S0",
+          "status": "COMPLETED_LOCAL",
+          "baseline_commit": "24afa4d84dc1ad39945404b5d3f05b63056adba5",
+          "changed_files": "see git show --stat",
+          "checks": [
+            {
+              "command": "python -m pytest tests/upstream -q",
+              "outcome": "PASS",
+              "detail": "64 passed"
+            },
+            {
+              "command": "python tools/verify_upstream_licenses.py",
+              "outcome": "PASS"
+            },
+            {
+              "command": "python tools/verify_no_raw_fixtures.py",
+              "outcome": "PASS"
+            },
+            {
+              "command": "python tools/verify_no_network_provider.py",
+              "outcome": "PASS"
+            },
+            {
+              "command": "git diff --check",
+              "outcome": "PASS"
+            }
+          ],
+          "external_blockers": [],
+          "remaining_risks": [
+            "Upstream network detection providers (ollama, openai-compat) were removed at S0 by construction decision; their tests were updated to the local-only registry.",
+            "uv.lock to be generated when dependency set stabilizes (S3/S12)."
+          ],
+          "notes": "Restructured vaultengine/ -> src/legal_anonymizer, tests/ -> tests/upstream, examples/ -> examples/upstream via git mv with history preserved. Added upstream.lock.json, UPSTREAM.md, THIRD_PARTY_NOTICES.md, AGENTS.md, SECURITY.md, NOTICE and three verification tools. pyproject renamed package legal-cn-anonymizer, CLI legal-anonymizer, Python >=3.11,<3.13."
+        }
+      ]
+    }
+  },
+  "juris-calculus": {
+    "baseline_commit": "9ecb66c613e502b0111cc485b6bf255bfeacad57",
+    "branch": "feat/privacy-egress-consumer",
+    "waves": []
+  }
+}

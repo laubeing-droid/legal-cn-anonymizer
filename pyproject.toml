@@ -3,43 +3,69 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "vault-engine"
-description = "Identity de-identification for cloud-LLM hand-off: local detection, consistent pseudonyms, a reversible local map, and a swappable model backend."
+name = "legal-cn-anonymizer"
+description = "Local Chinese legal-document anonymization: matter-scoped entity pseudonymization, reversible local mapping, independent verification, and signed consumer handoff - no cloud, no network providers."
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.11,<3.13"
 license = { text = "Apache-2.0" }
-authors = [{ name = "fishonbike" }]
+authors = [{ name = "legal-cn-anonymizer contributors" }]
 keywords = [
     "privacy", "pii", "de-identification", "anonymization", "redaction",
-    "pseudonymization", "llm", "ollama", "qwen", "egress",
+    "pseudonymization", "legal", "chinese", "pipl", "egress", "local-first",
 ]
 classifiers = [
-    "Development Status :: 4 - Beta",
-    "Intended Audience :: Developers",
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Legal Industry",
     "License :: OSI Approved :: Apache Software License",
-    "Operating System :: OS Independent",
-    "Programming Language :: Python :: 3",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Topic :: Security",
     "Topic :: Text Processing :: Filters",
 ]
-dependencies = []  # stdlib only — by design
+dependencies = [
+    "pydantic>=2,<3",
+    "jsonschema>=4",
+    "lxml>=5",
+    "rapidfuzz>=3",
+    "cryptography>=42",
+    "pywin32>=306; sys_platform == 'win32'",
+]
 dynamic = ["version"]
 
 [project.optional-dependencies]
-dev = ["pytest"]
-
-[project.urls]
-Source = "https://github.com/fishonbike/vault-engine"
-Issues = "https://github.com/fishonbike/vault-engine/issues"
+docx = ["python-docx>=1.1"]
+pdf = ["pypdfium2>=4", "Pillow>=10", "reportlab>=4"]
+ocr = ["rapidocr>=1.3", "onnxruntime>=1.16"]
+vision = ["zxing-cpp>=2"]
+presidio = ["presidio-analyzer>=2.2"]
+markitdown = ["markitdown>=0.1"]
+dev = [
+    "pytest>=8",
+    "hypothesis>=6",
+    "ruff",
+    "mypy",
+    "python-docx>=1.1",
+    "pypdfium2>=4",
+    "Pillow>=10",
+    "reportlab>=4",
+]
 
 [project.scripts]
-vault-engine = "vaultengine.cli:main"
+legal-anonymizer = "legal_anonymizer.cli:main"
+
+[project.urls]
+Upstream = "https://github.com/fishonbike/vault-engine"
 
 [tool.setuptools]
-packages = ["vaultengine", "vaultengine.providers"]
+packages = { find = { where = ["src"], include = ["legal_anonymizer*"] } }
 
 [tool.setuptools.dynamic]
-version = { attr = "vaultengine.__version__" }
+version = { attr = "legal_anonymizer.__version__" }
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"

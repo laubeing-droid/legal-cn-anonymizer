@@ -1,7 +1,7 @@
 import os
 import unittest
 
-from vaultengine import formats
+from legal_anonymizer import formats
 
 FIX = os.path.join(os.path.dirname(__file__), "fixtures", "sample_markdown.md")
 

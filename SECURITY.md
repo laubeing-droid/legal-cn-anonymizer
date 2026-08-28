@@ -1,59 +1,45 @@
 # Security Policy
 
-vault-engine is a privacy tool, so we take reports seriously and try to be
-unusually honest about what it does and does not protect.
+legal-cn-anonymizer is a privacy tool for Chinese legal materials, so we are
+deliberately conservative about what it claims.
 
-## Reporting a vulnerability
+## What this tool protects
 
-**Please do not open a public issue for a security problem.** Use GitHub's
-private vulnerability reporting:
+- Original identity surfaces never leave the machine in `ai-safe` mode; only typed
+  display pseudonyms are emitted.
+- The entity mapping, OCR private cache, original file names and review decisions are
+  encrypted with Windows DPAPI bound to the current user, and never enter any public
+  artifact, receipt, or consumer bundle.
+- Public receipts carry HMAC commitments keyed by a per-matter random secret, not
+  plain hashes of raw surfaces.
 
-> Repository → **Security** tab → **Report a vulnerability**
+## What this tool does NOT protect
 
-Include a minimal repro and the impact. We aim to acknowledge within a few days
-and to coordinate a fix and disclosure timeline with you. There is no bug-bounty
-program; credit is given in the advisory unless you prefer otherwise.
+- A fully compromised machine (malware with user rights can read what the user reads).
+- Screen recording, shoulder surfing, or the user voluntarily uploading the mapping.
+- Re-identification through rare quasi-identifiers the user chose to keep; the tool
+  flags these for human review instead of claiming they are safe.
+- Physical recoverability of deleted temp files on SSDs.
 
-In scope, for example:
-- a detection bypass that causes real identity to survive into the sanitized
-  output in a way the report does not flag;
-- mishandling of the reverse map (`*.map.json`) — e.g. it being written somewhere
-  it could leak, or emitted in output meant for the cloud;
-- command-injection / path-traversal / unsafe file handling in the CLI;
-- the `openai-compat` provider sending data anywhere other than the configured
-  endpoint.
+## Reporting
 
-## Operational red line — the reverse map
+Do not open a public issue for a security problem. Contact the maintainers directly
+with a minimal repro and impact assessment.
 
-The `*.map.json` reverse map **is** the identity it hides; it is the only thing
-that links tokens back to real people.
+## Design invariants enforced at runtime
 
-- Keep it local. **Never** send it to a cloud model and **never** commit it.
-- `.gitignore` excludes `*.map.json` by default and the CLI prints a reminder on
-  every run. Use `--one-way` to produce no map at all.
+Injective entity mapping per matter, matter-scoped isolation, idempotent transforms,
+reversible left-inverse, money/legal-date multiset conservation, document/part/page
+accounting, mapping exclusion from public bundles, and fail-closed behavior on every
+parse, integrity or state gap.
 
-Treat a leaked map as a full disclosure of the underlying data.
+## Threat-model red lines
 
-## Threat model & limitations
-
-vault-engine reduces identity exposure; it does not provide a mathematical
-guarantee of anonymity. Specifically:
-
-- **LLM detection is best-effort.** A model can miss a name or a rare
-  quasi-identifier. This is *not* k-anonymity or differential privacy.
-- **Quasi-identifiers and writing style are out of scope.** A unique combination
-  of non-name facts, or a distinctive writing voice, can still re-identify even
-  with names removed. Use `--policy max` for higher-stakes material.
-- **If the model backend fails, the run degrades to regex-only and exits
-  non-zero** (unless `--allow-degraded`) — it will not silently ship
-  under-redacted text, but you must still heed the warning.
-- **The `openai-compat` provider sends raw text to your endpoint** (it is the
-  detector). The default local provider exists precisely to avoid that.
-
-See the README's "Threat model & limitations" for the full picture. Always
-review the generated risk report before sending anything to a third party.
-
-## Supported versions
-
-Security fixes target the latest release on the default branch. Pin a version
-you have reviewed for sensitive use.
+- The mapping vault **is** the identity it hides. A leaked vault is a full
+  disclosure of the underlying matter. Keep it local; never commit it; never send it
+  anywhere.
+- Parse failures, integrity gaps and unknown states must fail closed
+  (`CLOSED_BLOCK`); the tool never reports "no sensitive data found" for content it
+  could not read.
+- Scanned documents always require a signed human review receipt before they may be
+  marked READY_BY_HUMAN.
