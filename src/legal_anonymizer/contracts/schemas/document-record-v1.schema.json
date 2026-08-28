@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-cn-anonymizer.local/schemas/document-record-v1.schema.json",
+  "title": "document-record-v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "document_id",
+    "format",
+    "page_count",
+    "state"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "document_id": {
+      "type": "string",
+      "pattern": "^doc-[0-9]{3,}$"
+    },
+    "format": {
+      "enum": [
+        "markdown",
+        "text",
+        "docx",
+        "pdf_text",
+        "pdf_scan",
+        "image"
+      ]
+    },
+    "page_count": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "state": {
+      "enum": [
+        "DISCOVERED",
+        "SNAPSHOTTED",
+        "PARSED",
+        "OCR_REQUIRED",
+        "OCR_COMPLETE",
+        "TRANSFORMED",
+        "VERIFIED",
+        "BLOCKED"
+      ]
+    },
+    "sanitized_sha256": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "report_sha256": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  }
+}

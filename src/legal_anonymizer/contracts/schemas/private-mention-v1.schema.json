@@ -1,0 +1,149 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-cn-anonymizer.local/schemas/private-mention-v1.schema.json",
+  "title": "private-mention-v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "mention_id",
+    "document_id",
+    "locator",
+    "surface",
+    "surface_hmac",
+    "entity_type",
+    "source",
+    "confidence"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "mention_id": {
+      "type": "string"
+    },
+    "document_id": {
+      "type": "string"
+    },
+    "locator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "text_offset",
+            "pdf_box",
+            "ocr_box",
+            "docx_xml"
+          ]
+        },
+        "page": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "start": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "end": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "part": {
+          "type": "string"
+        },
+        "node_path": {
+          "type": "string"
+        },
+        "box": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 4,
+          "maxItems": 4
+        }
+      }
+    },
+    "surface": {
+      "type": "string",
+      "description": "RAW original value; private only"
+    },
+    "surface_hmac": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "entity_type": {
+      "enum": [
+        "PERSON",
+        "LEGAL_PERSON",
+        "UNINCORPORATED_ORG",
+        "PUBLIC_AUTHORITY",
+        "COURT",
+        "LAW_FIRM",
+        "PROJECT_DEPARTMENT",
+        "PROJECT",
+        "LOCATION",
+        "ACCOUNT",
+        "DOCUMENT",
+        "OTHER_PROTECTED"
+      ]
+    },
+    "source": {
+      "enum": [
+        "regex",
+        "ner",
+        "dictionary",
+        "structure",
+        "manual",
+        "vision"
+      ]
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "evidence_codes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "candidate_entity_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^ent:[a-z-]+:[0-9]{4,}$"
+      }
+    },
+    "review_state": {
+      "enum": [
+        "AUTO_ACCEPT",
+        "REVIEW_REQUIRED",
+        "ACCEPTED",
+        "REJECTED"
+      ]
+    },
+    "review_reasons": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "LOW_CONFIDENCE",
+          "OCR_DOCUMENT",
+          "QUASI_IDENTIFIER",
+          "ENTITY_RESOLUTION_AMBIGUOUS",
+          "HIDDEN_CONTENT",
+          "UNKNOWN_ATTACHMENT",
+          "QR_UNREADABLE",
+          "MANUAL_BOX_REQUIRED",
+          "PUBLISH_MODE"
+        ]
+      }
+    }
+  },
+  "description": "PRIVATE schema - never leaves the machine except inside DPAPI/portable state."
+}

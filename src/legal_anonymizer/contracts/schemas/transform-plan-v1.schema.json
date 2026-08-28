@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-cn-anonymizer.local/schemas/transform-plan-v1.schema.json",
+  "title": "transform-plan-v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "matter_id",
+    "entries"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "matter_id": {
+      "type": "string"
+    },
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "entity_id",
+          "entity_type",
+          "transform",
+          "locator_count"
+        ],
+        "properties": {
+          "entity_id": {
+            "type": "string",
+            "pattern": "^ent:[a-z-]+:[0-9]{4,}$"
+          },
+          "entity_type": {
+            "enum": [
+              "PERSON",
+              "LEGAL_PERSON",
+              "UNINCORPORATED_ORG",
+              "PUBLIC_AUTHORITY",
+              "COURT",
+              "LAW_FIRM",
+              "PROJECT_DEPARTMENT",
+              "PROJECT",
+              "LOCATION",
+              "ACCOUNT",
+              "DOCUMENT",
+              "OTHER_PROTECTED"
+            ]
+          },
+          "transform": {
+            "enum": [
+              "KEEP",
+              "PSEUDONYMIZE",
+              "MASK_KEEP_LAST_4",
+              "MASK_KEEP_FIRST_1",
+              "GENERALIZE_YEAR",
+              "GENERALIZE_ADMIN_DIVISION",
+              "PHYSICAL_REDACT",
+              "DROP_WITH_RECEIPT",
+              "REVIEW"
+            ]
+          },
+          "display_alias": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "locator_count": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    }
+  },
+  "description": "Public transform plan: entity ids, transforms and counts only - no surfaces."
+}

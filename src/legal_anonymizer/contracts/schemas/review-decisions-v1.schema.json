@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-cn-anonymizer.local/schemas/review-decisions-v1.schema.json",
+  "title": "review-decisions-v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "matter_id",
+    "decisions"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "matter_id": {
+      "type": "string"
+    },
+    "based_on_report_hash": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "decisions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "decision_id",
+          "target",
+          "action"
+        ],
+        "properties": {
+          "decision_id": {
+            "type": "string"
+          },
+          "target": {
+            "type": "string"
+          },
+          "action": {
+            "enum": [
+              "approve",
+              "reject",
+              "add",
+              "merge",
+              "split",
+              "manual_box",
+              "ocr_correction",
+              "hidden_content_policy"
+            ]
+          },
+          "detail": {
+            "type": "object"
+          },
+          "reviewer_subject": {
+            "type": "string"
+          },
+          "reviewer_role": {
+            "enum": [
+              "UPLOADING_LAWYER",
+              "MATTER_LEAD",
+              "DESIGNATED_REVIEWER"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "description": "Human review decisions (YAML file form is converted to this structure)."
+}

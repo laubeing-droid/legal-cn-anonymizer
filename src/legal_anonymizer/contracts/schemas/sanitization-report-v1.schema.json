@@ -1,0 +1,180 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-cn-anonymizer.local/schemas/sanitization-report-v1.schema.json",
+  "title": "sanitization-report-v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "matter_id",
+    "profile_id",
+    "status",
+    "gates"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "matter_id": {
+      "type": "string"
+    },
+    "profile_id": {
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "AUTO_READY",
+        "REVIEW_REQUIRED",
+        "READY_BY_HUMAN",
+        "CLOSED_BLOCK",
+        "ENGINE_ERROR"
+      ]
+    },
+    "gates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "privacy",
+        "completeness",
+        "utility",
+        "physical_redaction"
+      ],
+      "properties": {
+        "privacy": {
+          "enum": [
+            "PASS",
+            "FAIL",
+            "NOT_EVALUATED"
+          ]
+        },
+        "completeness": {
+          "enum": [
+            "PASS",
+            "FAIL",
+            "NOT_EVALUATED"
+          ]
+        },
+        "utility": {
+          "enum": [
+            "PASS",
+            "FAIL",
+            "REVIEW_REQUIRED",
+            "NOT_EVALUATED"
+          ]
+        },
+        "physical_redaction": {
+          "enum": [
+            "PASS",
+            "FAIL",
+            "NOT_APPLICABLE",
+            "NOT_EVALUATED"
+          ]
+        }
+      }
+    },
+    "document_records": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/docrec"
+      }
+    },
+    "invariant_results": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "boolean"
+      }
+    },
+    "open_review_reasons": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "LOW_CONFIDENCE",
+          "OCR_DOCUMENT",
+          "QUASI_IDENTIFIER",
+          "ENTITY_RESOLUTION_AMBIGUOUS",
+          "HIDDEN_CONTENT",
+          "UNKNOWN_ATTACHMENT",
+          "QR_UNREADABLE",
+          "MANUAL_BOX_REQUIRED",
+          "PUBLISH_MODE"
+        ]
+      }
+    },
+    "error_codes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "report_hash": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  },
+  "$defs": {
+    "docrec": {
+      "title": "document-record-v1",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "document_id",
+        "format",
+        "page_count",
+        "state"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "1.0"
+        },
+        "document_id": {
+          "type": "string",
+          "pattern": "^doc-[0-9]{3,}$"
+        },
+        "format": {
+          "enum": [
+            "markdown",
+            "text",
+            "docx",
+            "pdf_text",
+            "pdf_scan",
+            "image"
+          ]
+        },
+        "page_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "state": {
+          "enum": [
+            "DISCOVERED",
+            "SNAPSHOTTED",
+            "PARSED",
+            "OCR_REQUIRED",
+            "OCR_COMPLETE",
+            "TRANSFORMED",
+            "VERIFIED",
+            "BLOCKED"
+          ]
+        },
+        "sanitized_sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "report_sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    }
+  }
+}
