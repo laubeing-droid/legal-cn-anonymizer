@@ -190,6 +190,39 @@
             "DOCX/PDF formats still pending (S5-S7); scan only supports md/txt."
           ],
           "notes": "Full Markdown/Text main chain: scan (stable doc-xxx ids, sha256 snapshot), registry+dictionary recognition, MSSP resolution, typed transforms, end-to-start replacement, AI_INSTRUCTION_LIKE_CONTENT flagging (never deletion), matter-level signed receipt, independent verify service (fresh rule engine, surface residue, completeness, money/date multisets) with signed privacy-verification receipt, strict rehydrate. CLI: project init/status, scan, sanitize, verify, matter-mode rehydrate; exit codes 0/2/3/4/5/6. Honesty rule: without qualified NER, AUTO_READY requires a user dictionary covering subjects; otherwise REVIEW_REQUIRED."
+        },
+        {
+          "wave": "S5",
+          "status": "COMPLETED_LOCAL",
+          "checks": [
+            {
+              "command": "python -m pytest tests/docx -q",
+              "outcome": "PASS",
+              "detail": "9 passed"
+            },
+            {
+              "command": "python -m pytest tests/ -q",
+              "outcome": "PASS",
+              "detail": "153 passed (full regression)"
+            },
+            {
+              "command": "python tools/verify_no_raw_fixtures.py",
+              "outcome": "PASS"
+            },
+            {
+              "command": "python tools/verify_no_network_provider.py",
+              "outcome": "PASS"
+            },
+            {
+              "command": "git diff --check",
+              "outcome": "PASS"
+            }
+          ],
+          "external_blockers": [],
+          "remaining_risks": [
+            "Review PDF from DOCX (image rasterization) arrives with S6/S7 pipeline; DOCX->review.pdf not yet wired."
+          ],
+          "notes": "DOCX OOXML full chain: zipfile+lxml authority; full part inventory (document/headers/footers/footnotes/endnotes/comments, macros, customXml, embeddings, people, external rels, tracked changes); cross-run replacement (first run keeps prefix+style, middle cleared, last keeps suffix, xml:space=preserve); hidden-content policy decisions (KEEP_AND_SANITIZE with author blanking / FLATTEN_CURRENT_VIEW physically removing deleted text and comments / DROP_WITH_RECEIPT / BLOCK); metadata cleanup; sanitized DOCX + AI Markdown outputs; part disposition inventory; docx rehydrate roundtrip; verify service scans extracted text of every XML part (namespace-URI false positives excluded); CLI --dictionary and docx dispatch."
         }
       ]
     }

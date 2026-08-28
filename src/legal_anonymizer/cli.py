@@ -108,9 +108,13 @@ def cmd_rehydrate(args: argparse.Namespace) -> int:
     if getattr(args, "matter", None):
         from .application.rehydrate_service import RehydrateService
 
-        result = RehydrateService(Path(args.state_dir)).rehydrate_text(
-            args.matter, payload
-        )
+        svc = RehydrateService(Path(args.state_dir))
+        if args.infile.lower().endswith(".docx") and args.infile != "-":
+            result = svc.rehydrate_docx(args.matter, Path(args.infile),
+                                        Path(args.out or (args.infile + ".restored.docx")))
+            print(f"已回填 {result.replacements} 处假名 → {result.output_text}", file=sys.stderr)
+            return EXIT_OK
+        result = svc.rehydrate_text(args.matter, payload)
         _write(args.out or "-", result.output_text)
         if result.unmatched_aliases:
             print(
@@ -260,21 +264,64 @@ def cmd_scan(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+def _load_dictionary(path: str | None):
+    from .adapters.recognizers.project_dictionary import ProjectDictionaryProvider
+
+    if not path:
+        return None
+    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    return ProjectDictionaryProvider(
+        blacklist=payload.get("blacklist", []),
+        whitelist=payload.get("whitelist", []),
+        aliases=payload.get("aliases", []),
+    )
+
+
 def cmd_sanitize(args: argparse.Namespace) -> int:
     from .application.sanitize_service import SanitizeService
+    from .application.docx_pipeline import DocxSanitizeService
 
-    result = SanitizeService(Path(args.state_dir)).sanitize(
-        args.matter, Path(args.input_dir), Path(args.out)
+    dictionary = _load_dictionary(args.dictionary)
+    svc = SanitizeService(Path(args.state_dir))
+    result = svc.sanitize(args.matter, Path(args.input_dir), Path(args.out),
+                          dictionary=dictionary)
+
+    # DOCX inputs go through the OOXML pipeline (doc ids continue the scan order)
+    docx_files = sorted(
+        p for p in Path(args.input_dir).rglob("*.docx") if not p.name.startswith("~$")
     )
+    docx_status = None
+    if docx_files:
+        docx_svc = DocxSanitizeService(Path(args.state_dir))
+        start_index = len(result.documents) + 1
+        for offset, p in enumerate(docx_files):
+            doc_id = f"doc-{start_index + offset:03d}"
+            docx_result = docx_svc.sanitize_docx(
+                args.matter, p, Path(args.out), doc_id, dictionary=dictionary
+            )
+            docx_status = docx_result.status
+            for r in docx_result.review_reasons:
+                result.review_reasons.append(f"{doc_id}:{r}")
+
     if args.json:
         print(json.dumps(result.receipt or {"status": result.status}, ensure_ascii=False, indent=2))
     else:
-        print(f"状态: {result.status}")
+        worst = result.status
+        if docx_status == "CLOSED_BLOCK":
+            worst = "CLOSED_BLOCK"
+        elif docx_status == "REVIEW_REQUIRED" and worst == "AUTO_READY":
+            worst = "REVIEW_REQUIRED"
+        print(f"状态: {worst}")
         for r in result.review_reasons:
             print(f"  复核原因: {r}")
         if result.receipt_path:
             print(f"回执: {result.receipt_path}")
-    return result.exit_code
+    exit_code = result.exit_code
+    if docx_status == "CLOSED_BLOCK":
+        exit_code = 3
+    elif docx_status == "REVIEW_REQUIRED" and exit_code == 0:
+        exit_code = 2
+    return exit_code
 
 
 def cmd_verify(args: argparse.Namespace) -> int:
@@ -386,6 +433,7 @@ def build_parser() -> argparse.ArgumentParser:
     sa.add_argument("--out", required=True)
     sa.add_argument("--profile", default=None, help="仅当与 project init 不同时报错拦截")
     sa.add_argument("--state-dir", default=_default_state_dir())
+    sa.add_argument("--dictionary", default=None, help="项目词典 JSON（blacklist/whitelist/aliases）")
     sa.add_argument("--json", action="store_true")
     sa.set_defaults(func=cmd_sanitize)
 

@@ -46,6 +46,7 @@ class VerifyService:
 
     def verify(self, matter_id: str, out_dir: Path) -> VerifyResult:
         out_dir = Path(out_dir)
+        (out_dir / "receipts").mkdir(parents=True, exist_ok=True)
         state = MatterState.load(self.state_root, matter_id)
         private = state.read_private()
 
@@ -82,6 +83,27 @@ class VerifyService:
             for surface in surfaces:
                 if surface and surface in text:
                     residual_counts["surface_residue"] += 1
+
+        # DOCX outputs: scan extracted text of every XML part inside the package
+        import zipfile as _zf
+
+        from ..adapters.documents.docx.text_extract import extract_part_text
+
+        for docx_path in sorted((out_dir / "sanitized").glob("doc-*.sanitized.docx")):
+            seen_docs.add(docx_path.name.replace(".sanitized.docx", ""))
+            with _zf.ZipFile(docx_path) as zf:
+                for name in zf.namelist():
+                    if not name.endswith(".xml"):
+                        continue
+                    content = extract_part_text(zf.read(name))
+                    if not content:
+                        continue
+                    for det in independent.detect(content):
+                        if det.severity == "critical":
+                            residual_counts["critical_identifier_residual"] += 1
+                    for surface in surfaces:
+                        if surface and surface in content:
+                            residual_counts["surface_residue"] += 1
         if expected_docs - seen_docs:
             residual_counts["documents_unaccounted"] = len(expected_docs - seen_docs)
 

@@ -64,3 +64,16 @@ class RehydrateService:
         result = self.rehydrate_text(matter_id, text)
         Path(out_path).write_text(result.output_text, encoding="utf-8")
         return result
+
+    def rehydrate_docx(self, matter_id: str, in_path: Path, out_path: Path) -> RehydrateResult:
+        from ..adapters.documents.docx.rehydrate import rehydrate_docx
+
+        state = MatterState.load(self.state_root, matter_id)
+        private = state.read_private()
+        pairs = [
+            (e["display_alias"], e["canonical_surface"])
+            for e in private.get("entities", [])
+        ]
+        pairs += [(i["alias"], i["surface"]) for i in private.get("identifier_aliases", [])]
+        total = rehydrate_docx(Path(in_path), Path(out_path), pairs)
+        return RehydrateResult(output_text=str(out_path), replacements=total)
