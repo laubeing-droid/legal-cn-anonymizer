@@ -401,6 +401,36 @@
             "The mock consumer proves protocol closure only; no real consumer has imported a bundle."
           ],
           "notes": "Consumer protocol pack (schemas exact copies incl. consumer-contract-manifest-v1, signed examples auto-ready/ready-by-human/blocked, 6 negative fixtures with stable rejection codes, public key, signed contract manifest, SHA256SUMS, README); Legal Harness handoff export (sanitized artifacts with stable names, Party/MatterProfile structured objects from the SAME entity vault, material-input.json, signed sanitization receipt + bundle, private-field exclusion fail-closed); mock consumer with 9 stable checks (unknown signer, bad signature, schema mismatch, unknown field, mapping in bundle, stale receipt, artifact hash mismatch, missing review, blocked status); CLI bundle consumer-protocol / bundle legal-harness / verify-consumer-bundle; no access to legal-harness-repo internals, no fabricated Harness evidence."
+        },
+        {
+          "wave": "S11",
+          "status": "COMPLETED_LOCAL",
+          "checks": [
+            {
+              "command": "python -m pytest tests/jc_adapter -q",
+              "outcome": "PASS",
+              "detail": "5 passed"
+            },
+            {
+              "command": "python -m pytest tests/ -q",
+              "outcome": "PASS",
+              "detail": "201 passed (full regression)"
+            },
+            {
+              "command": "git diff --check",
+              "outcome": "PASS"
+            }
+          ],
+          "external_blockers": [
+            {
+              "blocker": "CLOSED_BLOCK_EXTERNAL/jc_production_runtime_not_configured",
+              "detail": "Mirror of the JC-side blocker: jc capabilities returns RUNTIME_NOT_CONFIGURED, so formal evaluate/verify/replay cannot run in this environment. The anonymizer emits only signed closed-field facts; the JC-side adapter reports REVIEW_ONLY scope and never claims formal acceptance."
+            }
+          ],
+          "remaining_risks": [
+            "Formal end-to-end with real rule pack requires the JC production state; not available here."
+          ],
+          "notes": "Anonymizer-side JC adapter: collect_privacy_facts verifies the receipt signature and artifact binding, requires the independent privacy verification receipt (privacy+completeness PASS), and emits jc-privacy-facts-v1 with only mechanically verified values (RawMaterialRemainedLocal, DirectNaturalPersonIdentifiersTransformed, MappingStoredLocalOnly, MappingExcludedFromExternalBundle, MoneyPreserved, LegalEventDatesPreserved, HumanReviewRequired/Completed, CriticalResidualCount, Purpose=CLOUD_LEGAL_ANALYSIS); signed Ed25519. CLI receipt jc. JC-side counterpart committed in juris-calculus feat/privacy-egress-consumer (33dec56): exact-copy schema + outside-kernel adapter, REVIEW_ONLY scope, candidate facts never admitted."
         }
       ]
     }

@@ -387,6 +387,20 @@ def cmd_review_issue(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+def cmd_receipt_jc(args: argparse.Namespace) -> int:
+    from .adapters.integrations.juris_calculus import JcAdapterError, emit_jc_facts
+
+    try:
+        payload = emit_jc_facts(
+            Path(args.state_dir), args.matter, Path(args.out_dir), Path(args.output)
+        )
+    except JcAdapterError as exc:
+        print(f"✗ jc_fact_admission_failed: {exc}", file=sys.stderr)
+        return 3
+    print(json.dumps(payload, ensure_ascii=False, indent=2))
+    return EXIT_OK
+
+
 def cmd_bundle_consumer_protocol(args: argparse.Namespace) -> int:
     from .application.consumer_protocol import build_consumer_protocol
 
@@ -577,6 +591,15 @@ def build_parser() -> argparse.ArgumentParser:
     vb.add_argument("bundle_dir")
     vb.add_argument("--protocol-dir", help="consumer protocol 包根目录")
     vb.set_defaults(func=cmd_verify_consumer_bundle)
+
+    jc = sub.add_parser("receipt", help="回执导出（jc：Juris Calculus 隐私事实）")
+    jc_sub = jc.add_subparsers(dest="receipt_command", required=True)
+    jcj = jc_sub.add_parser("jc", help="生成 jc-privacy-facts-v1（仅机器验证事实）")
+    jcj.add_argument("--matter", required=True)
+    jcj.add_argument("--out-dir", required=True, help="sanitize/verify 输出目录")
+    jcj.add_argument("--output", required=True)
+    jcj.add_argument("--state-dir", default=_default_state_dir())
+    jcj.set_defaults(func=cmd_receipt_jc)
 
     return parser
 
