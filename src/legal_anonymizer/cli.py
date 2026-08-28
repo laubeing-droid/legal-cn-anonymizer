@@ -247,6 +247,30 @@ def cmd_project_status(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+def cmd_project_export(args: argparse.Namespace) -> int:
+    from .application.portable_service import PortableError, export_portable
+
+    try:
+        export_portable(Path(args.state_dir), args.matter, Path(args.portable))
+    except PortableError as exc:
+        print(f"✗ {exc}", file=sys.stderr)
+        return 6
+    print(f"✓ 可迁移项目已导出 → {args.portable}", file=sys.stderr)
+    return EXIT_OK
+
+
+def cmd_project_import(args: argparse.Namespace) -> int:
+    from .application.portable_service import PortableError, import_portable
+
+    try:
+        matter = import_portable(Path(args.state_dir), Path(args.portable))
+    except PortableError as exc:
+        print(f"✗ {exc}", file=sys.stderr)
+        return 6
+    print(f"✓ 案件 {matter} 已导入", file=sys.stderr)
+    return EXIT_OK
+
+
 def cmd_scan(args: argparse.Namespace) -> int:
     from .application.scan_service import ScanError, scan
 
@@ -437,6 +461,15 @@ def build_parser() -> argparse.ArgumentParser:
     ps.add_argument("--matter", required=True)
     ps.add_argument("--state-dir", default=_default_state_dir())
     ps.set_defaults(func=cmd_project_status)
+    pe = p_sub.add_parser("export", help="导出可迁移项目（.lapx，Scrypt+AES-GCM）")
+    pe.add_argument("--matter", required=True)
+    pe.add_argument("--portable", required=True)
+    pe.add_argument("--state-dir", default=_default_state_dir())
+    pe.set_defaults(func=cmd_project_export)
+    pim = p_sub.add_parser("import", help="导入可迁移项目（密码经 getpass 输入）")
+    pim.add_argument("--portable", required=True)
+    pim.add_argument("--state-dir", default=_default_state_dir())
+    pim.set_defaults(func=cmd_project_import)
 
     sc = sub.add_parser("scan", help="扫描材料目录并分配 doc-xxx 稳定编号")
     sc.add_argument("input_dir")

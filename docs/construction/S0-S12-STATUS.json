@@ -291,6 +291,44 @@
             "zxing-cpp is optional; if absent, QR signals are skipped and scan review still applies."
           ],
           "notes": "Scan pipeline: hash-locked RapidOCR models (verified on every init, mismatch => CLOSED_BLOCK), reading order, OCR confidence < 0.85 => OCR_LOW_CONFIDENCE, non-empty page with empty OCR => MANUAL_REVIEW_REQUIRED, whole scan always REVIEW_REQUIRED regardless of confidence; OCR box -> pixel redaction with alias draw; manual boxes from decisions; QR/barcode via zxing-cpp: decoded text enters identifiers, undecodable => QR_UNREADABLE, codes physically removed; OCR raw text confined to private state; per-page states recorded (PENDING..BLOCKED)."
+        },
+        {
+          "wave": "S8",
+          "status": "COMPLETED_LOCAL",
+          "checks": [
+            {
+              "command": "python -m pytest tests/security -q",
+              "outcome": "PASS",
+              "detail": "19 passed"
+            },
+            {
+              "command": "python -m pytest tests/ -q",
+              "outcome": "PASS",
+              "detail": "183 passed (full regression)"
+            },
+            {
+              "command": "python tools/verify_no_raw_fixtures.py",
+              "outcome": "PASS"
+            },
+            {
+              "command": "python tools/verify_no_network_provider.py",
+              "outcome": "PASS"
+            },
+            {
+              "command": "git diff --check",
+              "outcome": "PASS"
+            }
+          ],
+          "external_blockers": [
+            {
+              "blocker": "CLOSED_BLOCK_EXTERNAL/cross_user_dpapi_test",
+              "detail": "A dedicated second-Windows-user account is not available in this environment; cross-user non-decryptability is enforced structurally by DPAPI user binding and verified indirectly (owner-only DACL + user-bound entropy), not by a live second-user login test."
+            }
+          ],
+          "remaining_risks": [
+            "DACL hardening uses icacls.exe; enterprise policy may override and is detected by verify_security drift checks."
+          ],
+          "notes": "DPAPI matter vault: private.dpapi sealed with user-bound DPAPI + matter entropy; tamper => mapping_decryption_failed fail-closed; safe_root with UNC/reparse refusal, junction refused; owner-only DACL (icacls harden + win32 verification, drift detection incl. Everyone grant test); atomic write-through with fsync; S4 seam auto-migrates to DPAPI; portable .lapx (Scrypt+AES-256-GCM, AAD binding, getpass-only passwords, tamper vs wrong-password indistinguishable, refuses overwrite); cache.dpapi envelope; CLI project export/import; leak-exclusion test scans all public artifacts."
         }
       ]
     }

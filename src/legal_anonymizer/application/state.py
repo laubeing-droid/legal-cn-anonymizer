@@ -1,15 +1,19 @@
-"""Matter private state. S4 uses an explicit INSECURE test seam (plaintext under
-the state directory, clearly marked); S8 replaces it with DPAPI-sealed storage
-and this module's persistence calls move behind the vault interface. Public
-manifests are written as plain JSON here already."""
+"""Matter state. On Windows the private envelope is sealed with DPAPI bound to
+the current user (private.dpapi); the plaintext seam survives only as a
+migration path from S4 matters and on non-Windows dev hosts (marked INSECURE).
+Public manifests are plain JSON."""
 
 from __future__ import annotations
 
 import json
 import secrets
+import sys
 from pathlib import Path
 
+from ..security.dpapi_vault import MatterVault, VaultError
+
 SEAM_MARKER = "INSECURE-TEST-SEAM.md"
+SEAM_FILE = "private.seam.json"
 
 
 class MatterStateError(RuntimeError):
@@ -17,12 +21,12 @@ class MatterStateError(RuntimeError):
 
 
 class MatterState:
-    """Per-matter state directory layout (S4 seam):
+    """Per-matter state directory layout (S8 hardened):
 
     <state>/<matter-id>/
       project.public.json        public manifest
-      private.seam.json          INSECURE plaintext private state (S8 -> DPAPI)
-      INSECURE-TEST-SEAM.md      marker explaining the seam
+      private.dpapi              DPAPI-sealed private envelope (current user)
+      cache.dpapi                optional sealed OCR cache
     """
 
     def __init__(self, state_root: Path, matter_id: str):
@@ -30,17 +34,23 @@ class MatterState:
         self.matter_id = matter_id
         self.dir = self.state_root / matter_id
         self.public_path = self.dir / "project.public.json"
-        self.private_path = self.dir / "private.seam.json"
+        self._vault = MatterVault(self.dir, matter_id)
 
     # -- lifecycle -------------------------------------------------------------
 
     def exists(self) -> bool:
-        return self.public_path.exists()
+        return self.public_path.exists() and self._vault.private_path.exists()
 
     def init(self, profile_id: str) -> None:
         if self.exists():
             raise MatterStateError(f"matter {self.matter_id} already initialized")
-        self.dir.mkdir(parents=True, exist_ok=True)
+        if self.public_path.exists() or self._vault.private_path.exists():
+            raise MatterStateError(
+                f"matter {self.matter_id} is half-initialized; refusing to recreate (fail closed)"
+            )
+        from ..security.safe_storage import atomic_write_bytes, safe_root
+
+        safe_root(self.state_root, matter_id=self.matter_id)
         self._write_json(
             self.public_path,
             {
@@ -51,8 +61,7 @@ class MatterState:
                 "status": "REVIEW_REQUIRED",
             },
         )
-        self._write_json(
-            self.private_path,
+        self._vault.create(
             {
                 "schema_version": "1.0",
                 "matter_id": self.matter_id,
@@ -61,13 +70,7 @@ class MatterState:
                 "identifier_aliases": [],
                 "original_filename_map": {},
                 "decisions": [],
-            },
-        )
-        (self.dir / SEAM_MARKER).write_text(
-            "# INSECURE TEST SEAM\n\n"
-            "This matter state is plaintext until S8 installs the DPAPI vault.\n"
-            "Do not claim durable secrecy for anything under this directory.\n",
-            encoding="utf-8",
+            }
         )
 
     @classmethod
@@ -82,9 +85,11 @@ class MatterState:
     # -- accessors ---------------------------------------------------------------
 
     def _write_json(self, path: Path, payload: dict) -> None:
-        path.write_text(
-            json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
-            encoding="utf-8",
+        from ..security.safe_storage import atomic_write_bytes
+
+        atomic_write_bytes(
+            path,
+            json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True).encode("utf-8"),
         )
 
     def read_public(self) -> dict:
@@ -94,12 +99,29 @@ class MatterState:
         self._write_json(self.public_path, payload)
 
     def read_private(self) -> dict:
-        return json.loads(self.private_path.read_text(encoding="utf-8"))
+        if self._vault.private_path.exists():
+            try:
+                return self._vault.unseal_private()
+            except VaultError as exc:
+                raise MatterStateError(str(exc)) from exc
+        if (self.dir / SEAM_FILE).exists():
+            # legacy S4 seam: migrate to DPAPI on first touch
+            payload = json.loads((self.dir / SEAM_FILE).read_text(encoding="utf-8"))
+            self.write_private(payload)
+            (self.dir / SEAM_FILE).unlink()
+            return payload
+        raise MatterStateError("private state missing; refusing to recreate (fail closed)")
 
     def write_private(self, payload: dict) -> None:
-        if not self.private_path.exists():
+        if not self._vault.private_path.exists() and not (self.dir / SEAM_FILE).exists():
             raise MatterStateError("private state missing; refusing to recreate (fail closed)")
-        self._write_json(self.private_path, payload)
+        try:
+            self._vault.seal_private(payload)
+        except VaultError as exc:
+            raise MatterStateError(str(exc)) from exc
+        seam = self.dir / SEAM_FILE
+        if seam.exists():
+            seam.unlink()
 
     @property
     def matter_secret(self) -> bytes:
