@@ -104,6 +104,24 @@ class VerifyService:
                     for surface in surfaces:
                         if surface and surface in content:
                             residual_counts["surface_residue"] += 1
+        # PDF review outputs: the rebuilt PDF must have no original text layer
+        from ..adapters.documents.pdf import pdfium_parser
+
+        for review_pdf in sorted((out_dir / "sanitized").glob("doc-*.review.pdf")):
+            seen_docs.add(review_pdf.name.replace(".review.pdf", ""))
+            try:
+                out_info = pdfium_parser.load_pdf(review_pdf)
+            except pdfium_parser.PdfInputError:
+                residual_counts["documents_unaccounted"] += 1
+                continue
+            for page in out_info.pages:
+                for det in independent.detect(page.text):
+                    if det.severity == "critical":
+                        residual_counts["critical_identifier_residual"] += 1
+                for surface in surfaces:
+                    if surface and surface in page.text:
+                        residual_counts["surface_residue"] += 1
+
         if expected_docs - seen_docs:
             residual_counts["documents_unaccounted"] = len(expected_docs - seen_docs)
 

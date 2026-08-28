@@ -291,6 +291,7 @@ def cmd_sanitize(args: argparse.Namespace) -> int:
         p for p in Path(args.input_dir).rglob("*.docx") if not p.name.startswith("~$")
     )
     docx_status = None
+    pdf_status = None
     if docx_files:
         docx_svc = DocxSanitizeService(Path(args.state_dir))
         start_index = len(result.documents) + 1
@@ -301,6 +302,23 @@ def cmd_sanitize(args: argparse.Namespace) -> int:
             )
             docx_status = docx_result.status
             for r in docx_result.review_reasons:
+                result.review_reasons.append(f"{doc_id}:{r}")
+
+    pdf_files = sorted(
+        p for p in Path(args.input_dir).rglob("*.pdf") if not p.name.startswith("~$")
+    )
+    if pdf_files:
+        from .application.pdf_pipeline import PdfSanitizeService
+
+        pdf_svc = PdfSanitizeService(Path(args.state_dir))
+        start_index = len(result.documents) + len(docx_files) + 1
+        for offset, p in enumerate(pdf_files):
+            doc_id = f"doc-{start_index + offset:03d}"
+            pdf_result = pdf_svc.sanitize_pdf(
+                args.matter, p, Path(args.out), doc_id, dictionary=dictionary
+            )
+            pdf_status = pdf_result["status"]
+            for r in pdf_result["review_reasons"]:
                 result.review_reasons.append(f"{doc_id}:{r}")
 
     if args.json:
@@ -317,9 +335,9 @@ def cmd_sanitize(args: argparse.Namespace) -> int:
         if result.receipt_path:
             print(f"回执: {result.receipt_path}")
     exit_code = result.exit_code
-    if docx_status == "CLOSED_BLOCK":
+    if docx_status == "CLOSED_BLOCK" or pdf_status == "CLOSED_BLOCK":
         exit_code = 3
-    elif docx_status == "REVIEW_REQUIRED" and exit_code == 0:
+    elif (docx_status == "REVIEW_REQUIRED" or pdf_status == "REVIEW_REQUIRED") and exit_code == 0:
         exit_code = 2
     return exit_code
 

@@ -223,6 +223,40 @@
             "Review PDF from DOCX (image rasterization) arrives with S6/S7 pipeline; DOCX->review.pdf not yet wired."
           ],
           "notes": "DOCX OOXML full chain: zipfile+lxml authority; full part inventory (document/headers/footers/footnotes/endnotes/comments, macros, customXml, embeddings, people, external rels, tracked changes); cross-run replacement (first run keeps prefix+style, middle cleared, last keeps suffix, xml:space=preserve); hidden-content policy decisions (KEEP_AND_SANITIZE with author blanking / FLATTEN_CURRENT_VIEW physically removing deleted text and comments / DROP_WITH_RECEIPT / BLOCK); metadata cleanup; sanitized DOCX + AI Markdown outputs; part disposition inventory; docx rehydrate roundtrip; verify service scans extracted text of every XML part (namespace-URI false positives excluded); CLI --dictionary and docx dispatch."
+        },
+        {
+          "wave": "S6",
+          "status": "COMPLETED_LOCAL",
+          "checks": [
+            {
+              "command": "python -m pytest tests/pdf_text -q",
+              "outcome": "PASS",
+              "detail": "5 passed"
+            },
+            {
+              "command": "python -m pytest tests/ -q",
+              "outcome": "PASS",
+              "detail": "158 passed (full regression)"
+            },
+            {
+              "command": "python tools/verify_no_raw_fixtures.py",
+              "outcome": "PASS"
+            },
+            {
+              "command": "python tools/verify_no_network_provider.py",
+              "outcome": "PASS"
+            },
+            {
+              "command": "git diff --check",
+              "outcome": "PASS"
+            }
+          ],
+          "external_blockers": [],
+          "remaining_risks": [
+            "Review PDF is rasterized (not editable) by design; redaction-box OCR double-check arrives with S9 physical gate.",
+            "No CJK font on the machine => alias text replaced by black box (recorded)."
+          ],
+          "notes": "Text PDF chain: pdfium input checks (header/encryption/render), per-page text + charboxes, MSSP resolution, charbox->pixel mapping at 200 DPI, physical erase + alias draw on rasterized pages, image-only review PDF rebuilt with invariant metadata (no attachments/scripts/forms/annotations/text layer), sanitized AI Markdown built from the SAME resolved transforms (bug fixed: markdown was briefly built from raw text and correctly flagged by the independent verifier), page/size accounting, scan PDFs routed to S7 with REVIEW_REQUIRED, invalid PDFs fail closed, verify service re-extracts output PDF text."
         }
       ]
     }
