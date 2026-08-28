@@ -329,6 +329,44 @@
             "DACL hardening uses icacls.exe; enterprise policy may override and is detected by verify_security drift checks."
           ],
           "notes": "DPAPI matter vault: private.dpapi sealed with user-bound DPAPI + matter entropy; tamper => mapping_decryption_failed fail-closed; safe_root with UNC/reparse refusal, junction refused; owner-only DACL (icacls harden + win32 verification, drift detection incl. Everyone grant test); atomic write-through with fsync; S4 seam auto-migrates to DPAPI; portable .lapx (Scrypt+AES-256-GCM, AAD binding, getpass-only passwords, tamper vs wrong-password indistinguishable, refuses overwrite); cache.dpapi envelope; CLI project export/import; leak-exclusion test scans all public artifacts."
+        },
+        {
+          "wave": "S9",
+          "status": "COMPLETED_LOCAL",
+          "checks": [
+            {
+              "command": "python -m pytest tests/benchmark -q",
+              "outcome": "PASS",
+              "detail": "7 passed"
+            },
+            {
+              "command": "python -m pytest tests/ -q",
+              "outcome": "PASS",
+              "detail": "190 passed (full regression)"
+            },
+            {
+              "command": "python tools/verify_no_raw_fixtures.py",
+              "outcome": "PASS"
+            },
+            {
+              "command": "python tools/verify_no_network_provider.py",
+              "outcome": "PASS"
+            },
+            {
+              "command": "git diff --check",
+              "outcome": "PASS"
+            }
+          ],
+          "external_blockers": [
+            {
+              "blocker": "CLOSED_BLOCK_EXTERNAL/independent_third_party_acceptance",
+              "detail": "No independent third-party human acceptance exists in this environment; the human-review receipt flow implements the accountability mechanism locally and honestly, but real acceptance requires an actual reviewer outside this construction run."
+            }
+          ],
+          "remaining_risks": [
+            "Benchmark Person/Org recall is measured against the dictionary baseline only; NER recall numbers remain unclaimed until a qualified offline model exists."
+          ],
+          "notes": "Independent acceptance closed loop: signed human-review receipts (bind matter/report/bundle/reviewer/decisions/single-use), READY_BY_HUMAN only via valid receipt binding the CURRENT artifact set; stale-receipt and planted-residual scenarios enforced by verify (output_hash_mismatch, critical_identifier_residual); receipt binding detects any artifact change; matter-level review flag monotonic across document pipelines; CLI review command; synthetic benchmark (5-doc corpus, fully synthetic surfaces) with mechanical metrics and honest NER reporting; no SAFE/100% ANONYMIZED wording in outputs."
         }
       ]
     }

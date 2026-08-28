@@ -317,8 +317,10 @@ class SanitizeService:
             else SanitizationStatus.REVIEW_REQUIRED
         )
         public["documents"] = [d.document_id for d in report.documents]
-        public["status"] = status.value
         state.write_public(public)
+        from .status_accounting import update_matter_review_flag
+
+        update_matter_review_flag(state, bool(review_reasons))
 
         receipt_body = {
             "schema_version": "1.0",

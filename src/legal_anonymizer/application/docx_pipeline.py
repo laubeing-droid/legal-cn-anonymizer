@@ -312,6 +312,9 @@ class DocxSanitizeService:
         if public["documents"] is not None and document_id not in public["documents"]:
             public["documents"].append(document_id)
             state.write_public(public)
+        from .status_accounting import update_matter_review_flag
+
+        update_matter_review_flag(state, bool(review_reasons))
 
         return DocxResult(
             status=status.value,

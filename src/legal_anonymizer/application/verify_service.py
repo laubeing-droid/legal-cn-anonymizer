@@ -65,6 +65,8 @@ class VerifyService:
             "money_invariant_failures": 0,
             "legal_date_invariant_failures": 0,
             "documents_unaccounted": 0,
+            "output_hash_mismatch": 0,
+            "pdf_text_layer_residual": 0,
         }
         privacy = "PASS"
         completeness = "PASS"
@@ -161,17 +163,62 @@ class VerifyService:
         if residual_counts["money_invariant_failures"] or residual_counts["legal_date_invariant_failures"]:
             utility = "FAIL"
 
+        # receipt binding: artifact set must match the signed sanitization
+        # receipt exactly — a stale receipt can never bind new artifacts
+        receipt_path = out_dir / "receipts" / "sanitization-receipt.json"
+        if receipt_path.exists():
+            import hashlib as _hl
+
+            receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+            current: dict[str, str] = {}
+            sanitized_dir = out_dir / "sanitized"
+            for f in sorted(sanitized_dir.glob("*")):
+                if f.is_file():
+                    rel = f"sanitized/{f.name}"
+                    current[rel] = _hl.sha256(f.read_bytes()).hexdigest()
+            if current != receipt.get("artifact_hashes", {}):
+                residual_counts["output_hash_mismatch"] = 1
+
         gates = {
             "privacy": privacy,
             "completeness": completeness,
             "utility": utility,
             "physical_redaction": "NOT_APPLICABLE",
         }
+        if residual_counts["output_hash_mismatch"]:
+            gates["completeness"] = "FAIL"
         status = (
             SanitizationStatus.CLOSED_BLOCK
             if privacy == "FAIL" or completeness == "FAIL" or utility == "FAIL"
             else SanitizationStatus.AUTO_READY
         )
+
+        # human review: REVIEW_REQUIRED matters become READY_BY_HUMAN only with
+        # a valid signed receipt binding the current artifact set
+        if status == SanitizationStatus.AUTO_READY:
+            from .review_service import ReviewError, check_review
+
+            try:
+                status_value = check_review(
+                    self.state_root, matter_id, out_dir,
+                    {"status": status.value, **gates},
+                )
+                status = SanitizationStatus(status_value)
+            except ReviewError as exc:
+                status = SanitizationStatus.CLOSED_BLOCK
+                residual_counts["output_hash_mismatch"] = (
+                    residual_counts["output_hash_mismatch"] or 1
+                )
+                receipt_path_out = out_dir / "receipts" / "privacy-verification-receipt.json"
+                receipt_path_out.parent.mkdir(parents=True, exist_ok=True)
+                receipt_path_out.write_text(
+                    json.dumps({"status": "CLOSED_BLOCK",
+                                "reason": str(exc)}, ensure_ascii=False, indent=2) + "\n",
+                    encoding="utf-8",
+                )
+                return VerifyResult(status=status.value, gates=gates,
+                                    residual_counts=residual_counts,
+                                    receipt_path=receipt_path_out)
 
         receipt_body = {
             "schema_version": "1.0",

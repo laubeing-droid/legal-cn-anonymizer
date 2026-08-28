@@ -366,6 +366,27 @@ def cmd_sanitize(args: argparse.Namespace) -> int:
     return exit_code
 
 
+def cmd_review_issue(args: argparse.Namespace) -> int:
+    from .application.review_service import ReviewError, issue_review_receipt, load_decisions
+
+    try:
+        decisions = load_decisions(Path(args.decisions)) if args.decisions else {
+            "matter_id": args.matter, "decisions": []
+        }
+        receipt = issue_review_receipt(
+            Path(args.state_dir), args.matter, Path(args.out_dir),
+            decisions, args.reviewer, args.role,
+        )
+    except (ReviewError, OSError) as exc:
+        print(f"✗ {exc}", file=sys.stderr)
+        return 4
+    if args.json:
+        print(json.dumps(receipt, ensure_ascii=False, indent=2))
+    else:
+        print(f"✓ 人工复核回执已签发 → {Path(args.out_dir) / 'receipts' / 'human-review-receipt.json'}")
+    return EXIT_OK
+
+
 def cmd_verify(args: argparse.Namespace) -> int:
     from .application.verify_service import VerifyService
 
@@ -494,6 +515,17 @@ def build_parser() -> argparse.ArgumentParser:
     ve.add_argument("--state-dir", default=_default_state_dir())
     ve.add_argument("--json", action="store_true")
     ve.set_defaults(func=cmd_verify)
+
+    rv = sub.add_parser("review", help="签发人工复核回执（绑定当前产物集合）")
+    rv.add_argument("out_dir")
+    rv.add_argument("--matter", required=True)
+    rv.add_argument("--state-dir", default=_default_state_dir())
+    rv.add_argument("--decisions", help="决定文件（JSON/YAML）")
+    rv.add_argument("--reviewer", required=True, help="复核人标识（如 Windows SID）")
+    rv.add_argument("--role", required=True,
+                    choices=["UPLOADING_LAWYER", "MATTER_LEAD", "DESIGNATED_REVIEWER"])
+    rv.add_argument("--json", action="store_true")
+    rv.set_defaults(func=cmd_review_issue)
 
     return parser
 

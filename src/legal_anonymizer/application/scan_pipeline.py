@@ -261,6 +261,9 @@ class ScanPipeline:
         # scans always require human confirmation, regardless of confidence
         review_reasons.add(ReviewReason.OCR_DOCUMENT)
         status = SanitizationStatus.REVIEW_REQUIRED
+        from .status_accounting import update_matter_review_flag
+
+        update_matter_review_flag(state, True)
 
         report = {
             "schema_version": "1.0",

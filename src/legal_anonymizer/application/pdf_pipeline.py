@@ -266,6 +266,9 @@ class PdfSanitizeService:
             if not review_reasons
             else SanitizationStatus.REVIEW_REQUIRED
         )
+        from .status_accounting import update_matter_review_flag
+
+        update_matter_review_flag(state, bool(review_reasons))
         return {
             "status": status.value,
             "review_reasons": sorted(r.value for r in review_reasons),
