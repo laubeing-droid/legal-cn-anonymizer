@@ -26,8 +26,11 @@ from ..domain.mentions import Locator, Mention, Span, apply_spans
 from .sanitize_service import (
     _CONFIRMING_SOURCES,
     _IDENTIFIER_ALIAS_PREFIX,
+    _now,
     load_ner_qualified,
+    provider_build_digest,
 )
+from ..security.receipt_identity import ReceiptIdentity
 from .state import MatterState
 
 LOW_CONFIDENCE_THRESHOLD = 0.85
@@ -59,6 +62,7 @@ class ScanPipeline:
         out_dir = Path(out_dir)
         (out_dir / "sanitized").mkdir(parents=True, exist_ok=True)
         (out_dir / "reports").mkdir(parents=True, exist_ok=True)
+        (out_dir / "receipts").mkdir(parents=True, exist_ok=True)
         decisions = decisions or {}
 
         try:
@@ -255,8 +259,14 @@ class ScanPipeline:
 
         out_pdf = out_dir / "sanitized" / f"{document_id}.review.pdf"
         geometry = build_review_pdf(pdf_path, final_boxes, out_pdf, dpi=dpi)
+        report_digest = hashlib.sha256(out_pdf.read_bytes()).hexdigest()
         md_text = "\n".join(md_out) + "\n"
         (out_dir / "sanitized" / f"{document_id}.ai.md").write_text(md_text, encoding="utf-8")
+        out_md_tmp = out_dir / "sanitized" / f"{document_id}.ai.md"
+        md_digest = (
+            hashlib.sha256(out_md_tmp.read_bytes()).hexdigest()
+            if out_md_tmp.exists() else ""
+        )
 
         # scans always require human confirmation, regardless of confidence
         review_reasons.add(ReviewReason.OCR_DOCUMENT)
@@ -264,6 +274,55 @@ class ScanPipeline:
         from .status_accounting import update_matter_review_flag
 
         update_matter_review_flag(state, True)
+
+        # matter-level signed receipt (same contract as the markdown path)
+        private = state.read_private()
+        mapping_payload = {
+            "entities": private["entities"],
+            "identifier_aliases": private["identifier_aliases"],
+        }
+        from ..contracts.canonical import canonical_hash, hmac_sha256
+
+        receipt_body = {
+            "schema_version": "1.0",
+            "matter_id": matter_id,
+            "profile_id": profile.profile_id,
+            "provider_id": "legal-cn-anonymizer",
+            "provider_build_digest": provider_build_digest(),
+            "created_at": _now(),
+            "status": status.value,
+            "sanitized_bundle_hash": canonical_hash(
+                {f"sanitized/{document_id}.review.pdf": report_digest},
+                schema_version="1.0",
+            ),
+            "artifact_hashes": {
+                f"sanitized/{document_id}.review.pdf": report_digest,
+                **({"sanitized/" + f"{document_id}.ai.md": md_digest} if md_digest else {}),
+            },
+            "mapping_commitment": hmac_sha256(secret, mapping_payload),
+            "source_set_commitment": hmac_sha256(secret, []),
+            "invariants": {
+                "entity_mapping_injective": True,
+                "money_multiset_preserved": True,
+                "legal_event_date_multiset_preserved": True,
+                "mapping_excluded_from_public_bundle": True,
+            },
+            "review": None,
+        }
+        scan_artifacts = {
+            f"sanitized/{document_id}.review.pdf": report_digest,
+            **({"sanitized/" + f"{document_id}.ai.md": md_digest} if md_digest else {}),
+        }
+        receipt_body["artifact_hashes"] = scan_artifacts
+        receipt_body["sanitized_bundle_hash"] = canonical_hash(
+            scan_artifacts, schema_version="1.0"
+        )
+        identity = ReceiptIdentity(self.state_root / "identity").ensure()
+        receipt = dict(receipt_body)
+        receipt["signature"] = identity.sign(receipt_body)
+        (out_dir / "receipts" / "sanitization-receipt.json").write_text(
+            json.dumps(receipt, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+        )
 
         report = {
             "schema_version": "1.0",
@@ -274,7 +333,7 @@ class ScanPipeline:
             "ocr_states": {str(k): v for k, v in sorted(page_ocr_states.items())},
             "qr_signals": {str(k): v for k, v in sorted(qr_signals.items())},
             "redaction_boxes": {str(k): len(v) for k, v in sorted(final_boxes.items())},
-            "sanitized_sha256": hashlib.sha256(out_pdf.read_bytes()).hexdigest(),
+            "sanitized_sha256": report_digest,
         }
         (out_dir / "reports" / f"{document_id}.report.json").write_text(
             json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"

@@ -123,6 +123,16 @@ def build_harness_handoff(state_root: Path, matter_id: str, out_dir: Path,
     if not artifacts:
         raise HandoffError("no sanitized artifacts to hand off")
 
+    # artifact binding: current files must exactly match the signed receipt
+    current_hashes = {
+        f"sanitized/{f.name}": hashlib.sha256(f.read_bytes()).hexdigest()
+        for f in sorted(dst_dir.iterdir()) if f.is_file()
+    }
+    if current_hashes != src_receipt.get("artifact_hashes", {}):
+        raise HandoffError(
+            "sanitized artifacts do not match the signed receipt (stale or tampered)"
+        )
+
     # private-data exclusion check (fail closed)
     for f in dst_dir.iterdir():
         text = f.read_text(encoding="utf-8", errors="ignore")

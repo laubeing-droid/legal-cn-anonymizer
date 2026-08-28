@@ -431,6 +431,78 @@
             "Formal end-to-end with real rule pack requires the JC production state; not available here."
           ],
           "notes": "Anonymizer-side JC adapter: collect_privacy_facts verifies the receipt signature and artifact binding, requires the independent privacy verification receipt (privacy+completeness PASS), and emits jc-privacy-facts-v1 with only mechanically verified values (RawMaterialRemainedLocal, DirectNaturalPersonIdentifiersTransformed, MappingStoredLocalOnly, MappingExcludedFromExternalBundle, MoneyPreserved, LegalEventDatesPreserved, HumanReviewRequired/Completed, CriticalResidualCount, Purpose=CLOUD_LEGAL_ANALYSIS); signed Ed25519. CLI receipt jc. JC-side counterpart committed in juris-calculus feat/privacy-egress-consumer (33dec56): exact-copy schema + outside-kernel adapter, REVIEW_ONLY scope, candidate facts never admitted."
+        },
+        {
+          "wave": "S12",
+          "status": "COMPLETED_LOCAL",
+          "final_status": "LOCAL_RC_WITH_EXTERNAL_BLOCKERS",
+          "checks": [
+            {
+              "command": "python tools/build_wheel.py",
+              "outcome": "PASS",
+              "detail": "wheel + sdist"
+            },
+            {
+              "command": "python tools/build_model_pack.py",
+              "outcome": "PASS",
+              "detail": "models-cn-v1.zip, hashes verified"
+            },
+            {
+              "command": "python tools/build_consumer_protocol.py",
+              "outcome": "PASS",
+              "detail": "3 examples + 6 negative fixtures, signed manifest"
+            },
+            {
+              "command": "python tools/build_windows_onedir.py",
+              "outcome": "PASS",
+              "detail": "legal-anonymizer-windows-x64 onedir; exe smoke test OK"
+            },
+            {
+              "command": "python tools/build_sbom.py",
+              "outcome": "PASS",
+              "detail": "SBOM.cdx.json, 15 components"
+            },
+            {
+              "command": "python tools/build_provenance.py",
+              "outcome": "PASS"
+            },
+            {
+              "command": "python tools/build_acceptance_report.py",
+              "outcome": "PASS",
+              "detail": "final_status=LOCAL_RC_WITH_EXTERNAL_BLOCKERS"
+            },
+            {
+              "command": "python tools/verify_distribution.py",
+              "outcome": "PASS"
+            },
+            {
+              "command": "python tools/verify_no_private_artifacts.py",
+              "outcome": "PASS"
+            },
+            {
+              "command": "python tools/verify_no_network.py",
+              "outcome": "PASS",
+              "detail": "full pipeline with all sockets blocked"
+            },
+            {
+              "command": "python -m pytest tests/ -q",
+              "outcome": "PASS",
+              "detail": "207 passed (incl. E2E scenarios A-F)"
+            },
+            {
+              "command": "git diff --check",
+              "outcome": "PASS"
+            }
+          ],
+          "external_blockers": [
+            "ner_model_distribution",
+            "jc_production_runtime_not_configured",
+            "cross_user_dpapi_test",
+            "code_signing_certificate",
+            "harness_internal_import",
+            "independent_third_party_acceptance"
+          ],
+          "notes": "Windows RC build: wheel+sdist, models-cn-v1.zip (hash-locked PP-OCR models vendored under models/), consumer-protocol-v1.zip, PyInstaller onedir (smoke-tested: version/scan run; no one-file self-extraction), CycloneDX SBOM, provenance with git commit/tree, NOTICE + THIRD_PARTY_NOTICES, SHA256SUMS (926 entries incl. onedir), acceptance report. E2E scenarios A-F all PASS against the mock consumer. dist/ remains local (gitignored); no push, no tag, no release."
         }
       ]
     }

@@ -1,0 +1,86 @@
+"""Build a CycloneDX-style SBOM from the locked dependency imports (no network)."""
+
+from __future__ import annotations
+
+import hashlib
+import importlib.metadata as im
+import json
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+
+DIRECT = [
+    "pydantic", "jsonschema", "lxml", "rapidfuzz", "cryptography", "pywin32",
+    "python-docx", "pypdfium2", "pillow", "reportlab", "rapidocr",
+    "onnxruntime", "zxing-cpp", "hypothesis", "pytest",
+]
+
+
+def _component(name: str) -> dict:
+    try:
+        meta = im.metadata(name)
+        version = meta["Version"]
+        license_field = meta.get("License") or ""
+    except im.PackageNotFoundError:
+        return {"name": name, "version": "NOT_INSTALLED", "licenses": []}
+    licenses = []
+    if license_field:
+        licenses.append({"id": license_field.split("(")[0].strip()[:60]})
+    return {
+        "name": meta["Name"],
+        "version": version,
+        "purl": f"pkg:pypi/{meta['Name'].lower().replace('_', '-')}@{version}",
+        "licenses": licenses,
+    }
+
+
+def main() -> int:
+    components = []
+    for name in DIRECT:
+        comp = _component(name)
+        if comp["version"] == "NOT_INSTALLED":
+            print(f"WARN: {name} not installed; listed without version")
+        components.append(comp)
+    sbom = {
+        "bomFormat": "CycloneDX",
+        "specVersion": "1.5",
+        "version": 1,
+        "metadata": {
+            "component": {
+                "type": "application",
+                "name": "legal-cn-anonymizer",
+                "version": _version(),
+            },
+            "note": "offline generation; hashes of the model pack are in models/manifest.json",
+        },
+        "components": components,
+    }
+    dist = ROOT / "dist"
+    dist.mkdir(exist_ok=True)
+    out = dist / "SBOM.cdx.json"
+    out.write_text(json.dumps(sbom, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    print(f"PASS: {out} ({len(components)} components)")
+    return 0
+
+
+def _version() -> str:
+    import tomllib
+
+    pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    attr = pyproject["tool"]["setuptools"]["dynamic"]["version"]["attr"]
+    if ":" in attr:
+        package, attr_name = attr.split(":", 1)
+    else:
+        package, attr_name = attr.rsplit(".", 1)
+    src = ROOT / "src"
+    sys.path.insert(0, str(src))
+    try:
+        module = __import__(package, fromlist=[attr_name])
+        return getattr(module, attr_name)
+    finally:
+        sys.path.remove(str(src))
+
+
+if __name__ == "__main__":
+    sys.exit(main())
