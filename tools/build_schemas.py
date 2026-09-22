@@ -214,6 +214,36 @@ SCHEMAS["human-review-receipt-v1"] = obj(
     ["matter_id", "report_hash", "sanitized_bundle_hash", "reviewer_subject", "reviewer_role", "decisions_hash", "issued_at"],
 )
 
+NER_COMPONENT = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["mechanism", "modelId", "modelVersion"],
+    "properties": {
+        "mechanism": {"type": "string", "minLength": 1},
+        "modelId": {"type": "string", "minLength": 1},
+        "modelVersion": {"type": "string", "minLength": 1},
+    },
+}
+RECALL_METRIC = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["hitCount", "groundTruthCount", "value"],
+    "properties": {
+        "hitCount": {"type": "integer", "minimum": 0},
+        "groundTruthCount": {"type": "integer", "minimum": 1},
+        "value": {"type": "number", "minimum": 0, "maximum": 1},
+    },
+}
+MASKING_METRIC = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["maskedNonSensitiveCharCount", "nonSensitiveCharCount", "value"],
+    "properties": {
+        "maskedNonSensitiveCharCount": {"type": "integer", "minimum": 0},
+        "nonSensitiveCharCount": {"type": "integer", "minimum": 1},
+        "value": {"type": "number", "minimum": 0, "maximum": 1},
+    },
+}
 GATES = {
     "type": "object",
     "additionalProperties": False,
@@ -415,6 +445,136 @@ SCHEMAS["jc-privacy-facts-v1"] = obj(
     ["matter_id", "created_at", "facts", "receipt_hash"],
     "Closed-field privacy facts for juris-calculus consumption.",
 )
+
+
+SCHEMAS["privacy-verification-receipt-v2"] = {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://legal-cn-anonymizer.local/schemas/privacy-verification-receipt-v2.schema.json",
+    "title": "privacy-verification-receipt-v2",
+    "type": "object",
+    "additionalProperties": False,
+    "required": [
+        "schema_version", "matter_id", "created_at", "gate_results",
+        "verifier_build_digest", "detector_stack", "verifier_stack", "coverage",
+        "residual_counts", "invariant_results",
+    ],
+    "properties": {
+        "schema_version": {"const": "2.0"},
+        "matter_id": {"type": "string"},
+        "created_at": RFC3339,
+        "gate_results": {
+            **GATES,
+            "properties": {
+                **GATES["properties"],
+                "privacy": {"enum": ["PASS", "FAIL", "NOT_EVALUATED", "REVIEW_REQUIRED"]},
+            },
+        },
+        "verifier_build_digest": {"type": "string"},
+        "detector_stack": {"type": "array", "items": NER_COMPONENT},
+        "verifier_stack": {"type": "array", "items": NER_COMPONENT},
+        "coverage": {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["complete", "reasons"],
+            "properties": {
+                "complete": {"type": "boolean"},
+                "reasons": {"type": "array", "items": {"type": "string"}},
+            },
+        },
+        "residual_counts": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0},
+                            "description": "includes 'ner_residual': heterogeneous-verifier hits on final delivered content the production stack missed"},
+        "invariant_results": {"type": "object", "additionalProperties": {"type": "boolean"}},
+        "signature": sig_block(),
+    },
+    "description": "Heterogeneous independent verification receipt (plan-v4.2 card 05-2).",
+}
+
+COVERAGE_STATEMENT_DEF = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["releaseProfileId", "profileVersion", "detectorStack",
+                 "verifierStack", "modelAssetsAvailable", "benchmark"],
+    "properties": {
+        "releaseProfileId": {"type": "string", "minLength": 1},
+        "profileVersion": {"type": "string", "minLength": 1},
+        "detectorStack": {"type": "array", "items": NER_COMPONENT, "minItems": 0},
+        "verifierStack": {"type": "array", "items": NER_COMPONENT, "minItems": 0},
+        "modelAssetsAvailable": {"type": "boolean"},
+        "benchmark": {
+            "anyOf": [
+                {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": ["id", "revision", "sampleCount", "overallRecall",
+                                 "personRecall", "falsePositiveRate", "evaluatedAt",
+                                 "claimScope"],
+                    "properties": {
+                        "id": {"type": "string", "minLength": 1},
+                        "revision": {"type": "string", "minLength": 1},
+                        "sampleCount": {"type": "integer", "minimum": 1},
+                        "overallRecall": RECALL_METRIC,
+                        "personRecall": {"anyOf": [RECALL_METRIC, {"type": "null"}]},
+                        "falsePositiveRate": MASKING_METRIC,
+                        "evaluatedAt": {"type": "string", "minLength": 1},
+                        "claimScope": {"const": "specified_benchmark_only"},
+                    },
+                },
+                {"type": "null"},
+            ]
+        },
+    },
+    "description": "Verbatim shape of the frozen plan-v4.2 runtime contract $defs/CoverageStatement.",
+}
+
+SCHEMAS["coverage-statement-v1"] = {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://legal-cn-anonymizer.local/schemas/coverage-statement-v1.schema.json",
+    "title": "coverage-statement-v1",
+    **COVERAGE_STATEMENT_DEF,
+}
+
+SCHEMAS["scan-bytes-report-v1"] = {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://legal-cn-anonymizer.local/schemas/scan-bytes-report-v1.schema.json",
+    "title": "scan-bytes-report-v1",
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["requestId", "status", "bodySha256", "scannedByteLength",
+                 "unscannedSegmentCount", "alertCount", "coverageStatement"],
+    "properties": {
+        "requestId": {"type": "string", "minLength": 1},
+        "status": {"enum": ["complete", "failed", "timeout", "unsupported_format", "model_missing"]},
+        "bodySha256": {"anyOf": [SHA256HEX, {"type": "null"}]},
+        "scannedByteLength": {"type": "integer", "minimum": 0},
+        "unscannedSegmentCount": {"type": "integer", "minimum": 0},
+        "alertCount": {"type": "integer", "minimum": 0},
+        "coverageStatement": COVERAGE_STATEMENT_DEF,
+    },
+    "description": "A-side implementation of the frozen ScanBytesReport; never carries an egress receipt.",
+}
+
+
+SCHEMAS["scan-bytes-request-v1"] = {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://legal-cn-anonymizer.local/schemas/scan-bytes-request-v1.schema.json",
+    "title": "scan-bytes-request-v1",
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["requestId", "encoding", "bodyBase64", "bodySha256", "byteLength",
+                 "contentType", "releaseProfileId", "profileVersion", "scanProfile"],
+    "properties": {
+        "requestId": {"type": "string", "minLength": 1},
+        "encoding": {"const": "base64"},
+        "bodyBase64": {"type": "string", "minLength": 1},
+        "bodySha256": SHA256HEX,
+        "byteLength": {"type": "integer", "minimum": 0},
+        "contentType": {"const": "application/json; charset=utf-8"},
+        "releaseProfileId": {"type": "string", "minLength": 1},
+        "profileVersion": {"type": "string", "minLength": 1},
+        "scanProfile": {"const": "json-recursive-keys-and-strings/v1"},
+    },
+    "description": "Verbatim shape of the frozen plan-v4.2 ScanBytesRequest draft.",
+}
 
 
 def main() -> int:

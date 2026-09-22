@@ -25,6 +25,7 @@ from .sanitize_service import (
     _CONFIRMING_SOURCES,
     _IDENTIFIER_ALIAS_PREFIX,
     load_ner_qualified,
+    ner_honesty_review,
 )
 from .state import MatterState
 
@@ -133,13 +134,8 @@ class PdfSanitizeService:
                     )
 
         vault.resolve()
-        if not load_ner_qualified():
-            if dictionary is None:
-                review_reasons.add(ReviewReason.LOW_CONFIDENCE)
-            else:
-                for m in vault._mentions:
-                    if m.source not in _CONFIRMING_SOURCES:
-                        review_reasons.add(ReviewReason.LOW_CONFIDENCE)
+        review_reasons |= ner_honesty_review(vault, dictionary is not None,
+                                             registry)
 
         id_alias: dict[tuple[str, str], str] = {}
         counters: dict[str, int] = {}

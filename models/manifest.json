@@ -27,7 +27,110 @@
       "person_org_mention_recall_min": 0.99,
       "per_class_minimum_enforced": true
     },
-    "degrade_behavior": "When unqualified, documents whose subject mentions are not user-dictionary-confirmed default to REVIEW_REQUIRED (LOW_CONFIDENCE). No recall number is advertised."
+    "degrade_behavior": "When unqualified, documents whose subject mentions are not user-dictionary-confirmed default to REVIEW_REQUIRED (LOW_CONFIDENCE). No recall number is advertised.",
+    "release_models": [
+      {
+        "asset_id": "cluener-roberta-base",
+        "model_id": "uer/roberta-base-finetuned-cluener2020-chinese",
+        "revision": "cddd8fc233e373855a8c0a7f4b7eb83acb686a2b",
+        "local_dir": "models/ner/cluener",
+        "license": "MIT (model weights by ydli-bgoc/UnionLab; license verified on HF model card)",
+        "files": {
+          "config.json": {
+            "sha256": "a80e368cebeaeb01ed195f068b01a65f5b01b87e8059434710a01f3b97a38598",
+            "bytes": 1800
+          },
+          "pytorch_model.bin": {
+            "sha256": "b865252516115c46bc508167fa2258f198bcce520eb7a1ac4fbf8d50dc361368",
+            "bytes": 406892015
+          },
+          "special_tokens_map.json": {
+            "sha256": "303df45a03609e4ead04bc3dc1536d0ab19b5358db685b6f3da123d05ec200e3",
+            "bytes": 112
+          },
+          "tokenizer_config.json": {
+            "sha256": "21b0a2fba3d74b521cdbd631b2936c2c063c856c3a05533fabee04005c02cd23",
+            "bytes": 295
+          },
+          "vocab.txt": {
+            "sha256": "45bbac6b341c319adc98a532532882e91a9cefc0329aa57bac9ae761c27b291c",
+            "bytes": 109540
+          }
+        }
+      },
+      {
+        "asset_id": "gliner2-base",
+        "model_id": "fastino/gliner2-base-v1",
+        "revision": "79c3a777abc572b4767922f3916cf63fb5754df2",
+        "local_dir": "models/ner/gliner2-base",
+        "license": "Apache-2.0 (GLiNER team)",
+        "files": {
+          "added_tokens.json": {
+            "sha256": "3c274ca559be8b7b18febf616724ec05f8a8abccd428bd2744608f45f7a0b067",
+            "bytes": 230
+          },
+          "config.json": {
+            "sha256": "33d8aa009deed4b5435d162e08b5a720b252a0084e59d30d366b37da8c0193c5",
+            "bytes": 236
+          },
+          "model.safetensors": {
+            "sha256": "845fc4bd93c525b86124c58ab4f56c9eacf8587953086b14c501fab25957c007",
+            "bytes": 833938108
+          },
+          "special_tokens_map.json": {
+            "sha256": "84ea70143f533d7e99b393d87f20010887a9ac2cba955828ef313886e4e83f4f",
+            "bytes": 2414
+          },
+          "spm.model": {
+            "sha256": "c679fbf93643d19aab7ee10c0b99e460bdbc02fedf34b92b05af343b4af586fd",
+            "bytes": 2464616
+          },
+          "tokenizer.json": {
+            "sha256": "1b7fbabfb4c690bed84c6793bfecae9b8dfe205751b04f9ffd1e76a1e7df9c16",
+            "bytes": 8650701
+          },
+          "tokenizer_config.json": {
+            "sha256": "4e6c6a8d26478b670692916266438485403b0c54af31fd1a12bab8a465d062e9",
+            "bytes": 3240
+          },
+          "encoder_config/config.json": {
+            "sha256": "9840a4db70bc007e6b65d336ebe2bddc53bc2ce210dc5757e50d5bb17122f7cd",
+            "bytes": 823
+          }
+        },
+        "loader": "gliner2 package (official); gliner 0.2.x mis-loads this checkpoint and is forbidden for it"
+      },
+      {
+        "asset_id": "gliner-medium-v21",
+        "model_id": "urchade/gliner_medium-v2.1",
+        "revision": "40ec419335d09393f298636f471328b722c6da9e",
+        "local_dir": "models/ner/gliner-medium-v21",
+        "license": "Apache-2.0 (GLiNER team); redistribution recorded in THIRD_PARTY_NOTICES.md",
+        "loader": "gliner (0.2.x) package; heterogeneous verifier engine (card 05-2)",
+        "files": {
+          "gliner_config.json": {
+            "sha256": "a8f3c2ecc57deb70077be6940962aa60e82d861a153a5cd2839b91795968ae7d",
+            "bytes": 476
+          },
+          "model.safetensors": {
+            "sha256": "922214c0c60f7835bb5c00f52ad1769d38518d5183f85de7bc03893a8403c023",
+            "bytes": 780735696
+          },
+          "pytorch_model.bin": {
+            "sha256": "622c907aa7c5a3639bb00a817634c50ecd906b881730c3e00f101897172d5be8",
+            "bytes": 780806090
+          },
+          "README.md": {
+            "sha256": "c348ab02b410cf00b1b250fede28edbfaf992291c0c06ca26e9e824478ce7e56",
+            "bytes": 4757
+          }
+        }
+      }
+    ],
+    "engine_wiring": {
+      "production": "presidio-analyzer NlpEngineProvider nlp_engine_name=transformers; spacy zh_core_web_sm tokenization + CLUENER token-classification (BIOES labels B-/I-/S-name,address,company,government,organization; book/game/movie/position/scene ignored as non-PII)",
+      "verifier_alternative": "gliner zero-shot span extraction (different architecture, tokenizer and decoding mechanism)"
+    }
   },
   "ocr": {
     "engine": "rapidocr-onnx",

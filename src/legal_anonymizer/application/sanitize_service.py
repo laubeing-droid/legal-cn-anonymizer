@@ -10,29 +10,27 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from ..adapters.documents.markdown import parse_markdown
-from ..adapters.recognizers.registry import RecognizerRegistry
 from ..adapters.recognizers.project_dictionary import ProjectDictionaryProvider
+from ..adapters.recognizers.registry import RecognizerRegistry
 from ..contracts.canonical import canonical_hash, canonical_json, hmac_sha256
 from ..contracts.models import SanitizationStatus
 from ..contracts.statuses import EntityType, ReviewReason, TransformKind
 from ..domain.entity_vault import EntityVault
+from ..domain.mentions import Locator, Mention, Span, apply_spans
 from ..domain.profiles import get_profile
 from ..domain.transforms import (
-    TransformExecutor,
     generalize_personal_address,
     mask_keep_last_4,
 )
 from ..domain.utility_snapshot import legal_date_multiset, money_multiset
-from ..domain.mentions import Locator, Mention, Span, apply_spans
 from ..ports.recognizer import Detection
-from ..security.receipt_identity import ReceiptIdentity, ReceiptIdentityError
+from ..security.receipt_identity import ReceiptIdentity
 from .scan_service import ScanError, read_text, scan
 from .state import MatterState
-
 
 _IDENTIFIER_ALIAS_PREFIX = {
     "email": "邮箱",
@@ -48,7 +46,7 @@ _CONFIRMING_SOURCES = {"dictionary", "manual"}
 
 
 def _now() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _find_models_manifest() -> Path | None:
@@ -105,6 +103,31 @@ class SanitizeResult:
         }[self.status]
 
 
+def ner_honesty_review(vault, dictionary_provided: bool, registry) -> set:
+    """Release-honesty gate (card 05-1), shared by all four production chains:
+
+    * NER stack MISSING at runtime => REVIEW_REQUIRED, never AUTO_READY over a
+      silent rules-only fallback;
+    * NER present but not benchmark-qualified => subject coverage is trusted
+      only where the user dictionary confirms the surface. A mention counts as
+      confirmed when SOME confirming source saw the same surface, so NER
+      corroborating a dictionary-listed party never newly blocks AUTO_READY,
+      while NER-only new surfaces still force review (fail closed);
+    * qualified release => no extra review from this gate.
+    """
+    if not registry.ner_available:
+        return {ReviewReason.LOW_CONFIDENCE}
+    if load_ner_qualified():
+        return set()
+    if not dictionary_provided:
+        return {ReviewReason.LOW_CONFIDENCE}
+    confirmed = {m.surface for m in vault._mentions
+                 if m.source in _CONFIRMING_SOURCES}
+    if any(m.surface not in confirmed for m in vault._mentions):
+        return {ReviewReason.LOW_CONFIDENCE}
+    return set()
+
+
 class SanitizeService:
     def __init__(self, state_root: Path, registry: RecognizerRegistry | None = None):
         self.state_root = Path(state_root)
@@ -146,7 +169,6 @@ class SanitizeService:
         if dictionary is not None:
             registry.providers.append(dictionary)
 
-        ner_qualified = load_ner_qualified()
         review_reasons: set[ReviewReason] = set()
         doc_payloads: list[dict] = []
         artifacts: dict[str, str] = {}
@@ -187,16 +209,11 @@ class SanitizeService:
 
         vault.resolve()
 
-        # NER honesty: without a qualified offline NER, subject coverage cannot
-        # be trusted unless every subject mention is user-dictionary-confirmed.
-        # A matter with no dictionary at all is never AUTO_READY.
-        if not ner_qualified:
-            if dictionary is None:
-                review_reasons.add(ReviewReason.LOW_CONFIDENCE)
-            else:
-                for m in vault._mentions:
-                    if m.source not in _CONFIRMING_SOURCES:
-                        review_reasons.add(ReviewReason.LOW_CONFIDENCE)
+        # NER honesty (card 05-1): AUTO_READY on NER-dependent coverage requires
+        # BOTH a benchmark-qualified release config AND the NER stack actually
+        # available in this run. A degraded rules-only stack never passes.
+        review_reasons |= ner_honesty_review(vault, dictionary is not None,
+                                             registry)
 
         # identifier alias assignment (deterministic by first occurrence)
         id_alias: dict[tuple[str, str], str] = {}

@@ -39,6 +39,7 @@ from .sanitize_service import (
     _CONFIRMING_SOURCES,
     _now,
     load_ner_qualified,
+    ner_honesty_review,
     provider_build_digest,
 )
 from .state import MatterState
@@ -161,13 +162,8 @@ class DocxSanitizeService:
             per_part.append((tape, part))
 
         vault.resolve()
-        if not load_ner_qualified():
-            if dictionary is None:
-                review_reasons.add(ReviewReason.LOW_CONFIDENCE)
-            else:
-                for m in vault._mentions:
-                    if m.source not in _CONFIRMING_SOURCES:
-                        review_reasons.add(ReviewReason.LOW_CONFIDENCE)
+        review_reasons |= ner_honesty_review(vault, dictionary is not None,
+                                             registry)
 
         id_alias: dict[tuple[str, str], str] = {}
         counters: dict[str, int] = {}

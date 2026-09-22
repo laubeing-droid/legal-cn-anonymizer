@@ -16,7 +16,7 @@ except Exception:  # noqa: BLE001 - optional extra
     Pattern = PatternRecognizer = None
     _PRESIDIO_IMPORTABLE = False
 
-from .cn_rules import RULES, Rule
+from .cn_rules import RULES
 
 
 class PresidioRegistryAdapter(RecognizerPort):

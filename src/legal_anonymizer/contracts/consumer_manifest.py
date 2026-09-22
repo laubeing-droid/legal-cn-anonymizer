@@ -17,6 +17,9 @@ PUBLIC_SCHEMAS = [
     "sanitized-bundle-v1",
     "human-review-receipt-v1",
     "privacy-verification-receipt-v1",
+    "privacy-verification-receipt-v2",
+    "coverage-statement-v1",
+    "scan-bytes-report-v1",
     "consumer-contract-manifest-v1",
 ]
 

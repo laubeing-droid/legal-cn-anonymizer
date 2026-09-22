@@ -1,0 +1,17 @@
+{
+  "release_profile_id": "race-cluener",
+  "profile_version": "1",
+  "detectors": [
+    "cluener-ner"
+  ],
+  "verifier": "cn-rules",
+  "llm": {
+    "enabled": false
+  },
+  "benchmark_id": "v42-synthetic",
+  "race_scope": [
+    "person",
+    "org",
+    "location"
+  ]
+}

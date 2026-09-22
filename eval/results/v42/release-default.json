@@ -1,0 +1,331 @@
+{
+  "status": "MEASURED",
+  "release_profile_id": "cn-release-v42",
+  "profile_version": "1",
+  "detectors": [
+    "cn-rules",
+    "cluener-ner"
+  ],
+  "detector_stack": [
+    {
+      "mechanism": "deterministic-regex",
+      "modelId": "cn-rules",
+      "modelVersion": "1.0"
+    },
+    {
+      "mechanism": "transformers-token-classification",
+      "modelId": "uer/roberta-base-finetuned-cluener2020-chinese",
+      "modelVersion": "cddd8fc233e373855a8c0a7f4b7eb83acb686a2b"
+    }
+  ],
+  "modelAssetsAvailable": true,
+  "claimScope": "specified_benchmark_only",
+  "benchmark": {
+    "id": "v42-synthetic",
+    "revision": "146cff21d12ff455af97279715ac189ceb60d7a104d644ed2e6b7a7ef753f71a",
+    "sampleCount": 27,
+    "scoredScope": [
+      "person",
+      "org",
+      "location",
+      "project",
+      "contact",
+      "id"
+    ],
+    "overallRecall": {
+      "hitCount": 56,
+      "groundTruthCount": 98,
+      "value": 0.5714
+    },
+    "personRecall": {
+      "hitCount": 21,
+      "groundTruthCount": 34,
+      "value": 0.6176
+    },
+    "falsePositiveRate": {
+      "maskedNonSensitiveCharCount": 10,
+      "nonSensitiveCharCount": 870,
+      "value": 0.0115
+    },
+    "maskedSensitiveChars": 351,
+    "perCategory": {
+      "contact": {
+        "recall": {
+          "hitCount": 9,
+          "groundTruthCount": 15,
+          "value": 0.6
+        }
+      },
+      "id": {
+        "recall": {
+          "hitCount": 0,
+          "groundTruthCount": 3,
+          "value": 0.0
+        }
+      },
+      "location": {
+        "recall": {
+          "hitCount": 13,
+          "groundTruthCount": 18,
+          "value": 0.7222
+        }
+      },
+      "org": {
+        "recall": {
+          "hitCount": 12,
+          "groundTruthCount": 21,
+          "value": 0.5714
+        }
+      },
+      "person": {
+        "recall": {
+          "hitCount": 21,
+          "groundTruthCount": 34,
+          "value": 0.6176
+        }
+      },
+      "project": {
+        "recall": {
+          "hitCount": 1,
+          "groundTruthCount": 7,
+          "value": 0.1429
+        }
+      }
+    },
+    "latencyMsPerDoc": {
+      "p50": 91.2,
+      "p95": 129.3,
+      "warmupDocs": 5,
+      "measuredDocs": 22
+    },
+    "peakRssMb": 1107.7,
+    "evaluatedAt": "2026-09-22T17:33:42Z"
+  },
+  "gates": {
+    "overallRecall>=90%": false,
+    "personRecall>=90%": false,
+    "falsePositiveRate<=5%": true
+  },
+  "misses": [
+    {
+      "doc": 1,
+      "category": "org",
+      "surface": "未来无限"
+    },
+    {
+      "doc": 1,
+      "category": "org",
+      "surface": "字节跳动"
+    },
+    {
+      "doc": 1,
+      "category": "project",
+      "surface": "Orca"
+    },
+    {
+      "doc": 2,
+      "category": "id",
+      "surface": "110101199003078888"
+    },
+    {
+      "doc": 4,
+      "category": "person",
+      "surface": "老张"
+    },
+    {
+      "doc": 4,
+      "category": "person",
+      "surface": "小李"
+    },
+    {
+      "doc": 4,
+      "category": "project",
+      "surface": "灯塔计划"
+    },
+    {
+      "doc": 5,
+      "category": "contact",
+      "surface": "chenjing_vc"
+    },
+    {
+      "doc": 5,
+      "category": "project",
+      "surface": "Nebula"
+    },
+    {
+      "doc": 7,
+      "category": "person",
+      "surface": "Emily Carter"
+    },
+    {
+      "doc": 7,
+      "category": "org",
+      "surface": "Stanford Medical Center"
+    },
+    {
+      "doc": 7,
+      "category": "location",
+      "surface": "Palo Alto"
+    },
+    {
+      "doc": 7,
+      "category": "contact",
+      "surface": "+1 650 555 0142"
+    },
+    {
+      "doc": 8,
+      "category": "person",
+      "surface": "Marcus Lin"
+    },
+    {
+      "doc": 8,
+      "category": "org",
+      "surface": "Benchmark Capital"
+    },
+    {
+      "doc": 8,
+      "category": "org",
+      "surface": "Stripe"
+    },
+    {
+      "doc": 8,
+      "category": "project",
+      "surface": "Project Falcon"
+    },
+    {
+      "doc": 8,
+      "category": "contact",
+      "surface": "415-555-0199"
+    },
+    {
+      "doc": 9,
+      "category": "person",
+      "surface": "Priya Sharma"
+    },
+    {
+      "doc": 9,
+      "category": "org",
+      "surface": "Acme Robotics"
+    },
+    {
+      "doc": 9,
+      "category": "location",
+      "surface": "Austin"
+    },
+    {
+      "doc": 9,
+      "category": "location",
+      "surface": "Texas"
+    },
+    {
+      "doc": 10,
+      "category": "person",
+      "surface": "Hassan Ali"
+    },
+    {
+      "doc": 10,
+      "category": "org",
+      "surface": "MIT"
+    },
+    {
+      "doc": 10,
+      "category": "project",
+      "surface": "Orion"
+    },
+    {
+      "doc": 10,
+      "category": "contact",
+      "surface": "02-7946-0123"
+    },
+    {
+      "doc": 11,
+      "category": "contact",
+      "surface": "@deep-founder"
+    },
+    {
+      "doc": 12,
+      "category": "person",
+      "surface": "April May"
+    },
+    {
+      "doc": 12,
+      "category": "org",
+      "surface": "Two Sigma"
+    },
+    {
+      "doc": 12,
+      "category": "org",
+      "surface": "NYSE"
+    },
+    {
+      "doc": 12,
+      "category": "contact",
+      "surface": "@quantdev_"
+    },
+    {
+      "doc": 12,
+      "category": "location",
+      "surface": "SoMa"
+    },
+    {
+      "doc": 13,
+      "category": "person",
+      "surface": "David 王"
+    },
+    {
+      "doc": 13,
+      "category": "person",
+      "surface": "王总"
+    },
+    {
+      "doc": 13,
+      "category": "person",
+      "surface": "老周"
+    },
+    {
+      "doc": 14,
+      "category": "person",
+      "surface": "R.K. Patel"
+    },
+    {
+      "doc": 14,
+      "category": "project",
+      "surface": "Daybreak"
+    },
+    {
+      "doc": 14,
+      "category": "id",
+      "surface": "EMP-4471"
+    },
+    {
+      "doc": 14,
+      "category": "location",
+      "surface": "Reston"
+    },
+    {
+      "doc": 15,
+      "category": "id",
+      "surface": "京A·88888"
+    },
+    {
+      "doc": 110,
+      "category": "person",
+      "surface": "王某"
+    },
+    {
+      "doc": 110,
+      "category": "person",
+      "surface": "赵某"
+    }
+  ],
+  "machine": {
+    "system": "Windows 11",
+    "machine": "AMD64",
+    "python": "3.12.10",
+    "cpu_count": 12,
+    "pinned_threads": 4,
+    "torch": "2.14.0+cpu",
+    "transformers": "4.57.6",
+    "presidio_analyzer": "installed"
+  }
+}

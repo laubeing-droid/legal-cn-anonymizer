@@ -1,0 +1,342 @@
+{
+  "status": "MEASURED",
+  "release_profile_id": "race-gliner",
+  "profile_version": "1",
+  "detectors": [
+    "gliner-ner"
+  ],
+  "detector_stack": [
+    {
+      "mechanism": "zero-shot-span-gliner2",
+      "modelId": "fastino/gliner2-base-v1",
+      "modelVersion": "79c3a777abc572b4767922f3916cf63fb5754df2"
+    }
+  ],
+  "modelAssetsAvailable": true,
+  "claimScope": "specified_benchmark_only",
+  "benchmark": {
+    "id": "v42-synthetic",
+    "revision": "146cff21d12ff455af97279715ac189ceb60d7a104d644ed2e6b7a7ef753f71a",
+    "sampleCount": 27,
+    "scoredScope": [
+      "person",
+      "org",
+      "location"
+    ],
+    "overallRecall": {
+      "hitCount": 22,
+      "groundTruthCount": 73,
+      "value": 0.3014
+    },
+    "personRecall": {
+      "hitCount": 9,
+      "groundTruthCount": 34,
+      "value": 0.2647
+    },
+    "falsePositiveRate": {
+      "maskedNonSensitiveCharCount": 71,
+      "nonSensitiveCharCount": 1184,
+      "value": 0.06
+    },
+    "maskedSensitiveChars": 182,
+    "perCategory": {
+      "location": {
+        "recall": {
+          "hitCount": 5,
+          "groundTruthCount": 18,
+          "value": 0.2778
+        }
+      },
+      "org": {
+        "recall": {
+          "hitCount": 8,
+          "groundTruthCount": 21,
+          "value": 0.381
+        }
+      },
+      "person": {
+        "recall": {
+          "hitCount": 9,
+          "groundTruthCount": 34,
+          "value": 0.2647
+        }
+      }
+    },
+    "latencyMsPerDoc": {
+      "p50": 211.0,
+      "p95": 275.0,
+      "warmupDocs": 5,
+      "measuredDocs": 22
+    },
+    "peakRssMb": 2035.3,
+    "evaluatedAt": "2026-09-22T17:02:21Z"
+  },
+  "gates": {},
+  "misses": [
+    {
+      "doc": 1,
+      "category": "person",
+      "surface": "林若曦"
+    },
+    {
+      "doc": 1,
+      "category": "person",
+      "surface": "陈大壮"
+    },
+    {
+      "doc": 1,
+      "category": "org",
+      "surface": "星澜资本"
+    },
+    {
+      "doc": 1,
+      "category": "org",
+      "surface": "未来无限"
+    },
+    {
+      "doc": 1,
+      "category": "org",
+      "surface": "字节跳动"
+    },
+    {
+      "doc": 1,
+      "category": "location",
+      "surface": "深圳南山区"
+    },
+    {
+      "doc": 2,
+      "category": "person",
+      "surface": "王建国"
+    },
+    {
+      "doc": 2,
+      "category": "org",
+      "surface": "协和医院"
+    },
+    {
+      "doc": 2,
+      "category": "location",
+      "surface": "北京朝阳区"
+    },
+    {
+      "doc": 3,
+      "category": "person",
+      "surface": "苏曼"
+    },
+    {
+      "doc": 3,
+      "category": "person",
+      "surface": "周明"
+    },
+    {
+      "doc": 3,
+      "category": "org",
+      "surface": "云图科技"
+    },
+    {
+      "doc": 3,
+      "category": "location",
+      "surface": "杭州余杭区"
+    },
+    {
+      "doc": 4,
+      "category": "person",
+      "surface": "老张"
+    },
+    {
+      "doc": 4,
+      "category": "person",
+      "surface": "小李"
+    },
+    {
+      "doc": 4,
+      "category": "person",
+      "surface": "张伟"
+    },
+    {
+      "doc": 4,
+      "category": "location",
+      "surface": "成都高新区"
+    },
+    {
+      "doc": 4,
+      "category": "location",
+      "surface": "明远大厦"
+    },
+    {
+      "doc": 4,
+      "category": "org",
+      "surface": "华为"
+    },
+    {
+      "doc": 5,
+      "category": "person",
+      "surface": "陈静"
+    },
+    {
+      "doc": 5,
+      "category": "org",
+      "surface": "红杉中国"
+    },
+    {
+      "doc": 6,
+      "category": "person",
+      "surface": "赵雷"
+    },
+    {
+      "doc": 6,
+      "category": "location",
+      "surface": "上海浦东"
+    },
+    {
+      "doc": 6,
+      "category": "location",
+      "surface": "张江高科园区"
+    },
+    {
+      "doc": 6,
+      "category": "org",
+      "surface": "维度智能"
+    },
+    {
+      "doc": 11,
+      "category": "person",
+      "surface": "高飞"
+    },
+    {
+      "doc": 11,
+      "category": "person",
+      "surface": "高飞"
+    },
+    {
+      "doc": 11,
+      "category": "person",
+      "surface": "白雪"
+    },
+    {
+      "doc": 11,
+      "category": "location",
+      "surface": "中关村"
+    },
+    {
+      "doc": 13,
+      "category": "person",
+      "surface": "王总"
+    },
+    {
+      "doc": 13,
+      "category": "person",
+      "surface": "老周"
+    },
+    {
+      "doc": 13,
+      "category": "person",
+      "surface": "桑德拉·科瓦奇"
+    },
+    {
+      "doc": 13,
+      "category": "location",
+      "surface": "慕尼黑"
+    },
+    {
+      "doc": 15,
+      "category": "org",
+      "surface": "弘毅资本"
+    },
+    {
+      "doc": 15,
+      "category": "person",
+      "surface": "郑伟"
+    },
+    {
+      "doc": 15,
+      "category": "location",
+      "surface": "亦庄"
+    },
+    {
+      "doc": 101,
+      "category": "person",
+      "surface": "澹台明远"
+    },
+    {
+      "doc": 101,
+      "category": "person",
+      "surface": "尉迟霜"
+    },
+    {
+      "doc": 102,
+      "category": "person",
+      "surface": "何明"
+    },
+    {
+      "doc": 103,
+      "category": "org",
+      "surface": "海城中院"
+    },
+    {
+      "doc": 103,
+      "category": "org",
+      "surface": "宏远建材集团"
+    },
+    {
+      "doc": 103,
+      "category": "org",
+      "surface": "华宇建工"
+    },
+    {
+      "doc": 104,
+      "category": "location",
+      "surface": "河北省石家庄市桥西区中山西路166号"
+    },
+    {
+      "doc": 107,
+      "category": "person",
+      "surface": "张伟"
+    },
+    {
+      "doc": 107,
+      "category": "person",
+      "surface": "刘芳"
+    },
+    {
+      "doc": 108,
+      "category": "org",
+      "surface": "深圳华宇科技集团有限公司北京分公司"
+    },
+    {
+      "doc": 109,
+      "category": "location",
+      "surface": "河北省保定市容城县"
+    },
+    {
+      "doc": 109,
+      "category": "location",
+      "surface": "雄安新区"
+    },
+    {
+      "doc": 110,
+      "category": "person",
+      "surface": "王某"
+    },
+    {
+      "doc": 110,
+      "category": "person",
+      "surface": "赵某"
+    },
+    {
+      "doc": 112,
+      "category": "person",
+      "surface": "秦朗"
+    }
+  ],
+  "machine": {
+    "system": "Windows 11",
+    "machine": "AMD64",
+    "python": "3.12.10",
+    "cpu_count": 12,
+    "pinned_threads": 4,
+    "torch": "2.14.0+cpu",
+    "transformers": "4.57.6",
+    "presidio_analyzer": "installed"
+  }
+}

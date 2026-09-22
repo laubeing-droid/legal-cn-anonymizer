@@ -38,6 +38,8 @@ DEMO_DICTIONARY = ProjectDictionaryProvider(
         {"value": "暮云置业有限公司", "type": "LEGAL_PERSON"},
         {"value": "暮云置业", "type": "LEGAL_PERSON"},
         {"value": "暮云江畔安置房项目", "type": "PROJECT"},
+        {"value": "青崖律师事务所", "type": "LAW_FIRM"},
+        {"value": "暮云江畔", "type": "LOCATION"},
     ],
     aliases=[
         {"canonical": "暮云置业有限公司", "values": ["暮云置业有限公司", "暮云置业"],

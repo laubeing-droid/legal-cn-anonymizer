@@ -1,0 +1,17 @@
+{
+  "release_profile_id": "race-gliner",
+  "profile_version": "1",
+  "detectors": [
+    "gliner-ner"
+  ],
+  "verifier": "cn-rules",
+  "llm": {
+    "enabled": false
+  },
+  "benchmark_id": "v42-synthetic",
+  "race_scope": [
+    "person",
+    "org",
+    "location"
+  ]
+}

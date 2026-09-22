@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-cn-anonymizer.local/schemas/scan-bytes-request-v1.schema.json",
+  "title": "scan-bytes-request-v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "requestId",
+    "encoding",
+    "bodyBase64",
+    "bodySha256",
+    "byteLength",
+    "contentType",
+    "releaseProfileId",
+    "profileVersion",
+    "scanProfile"
+  ],
+  "properties": {
+    "requestId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "encoding": {
+      "const": "base64"
+    },
+    "bodyBase64": {
+      "type": "string",
+      "minLength": 1
+    },
+    "bodySha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "byteLength": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "contentType": {
+      "const": "application/json; charset=utf-8"
+    },
+    "releaseProfileId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "profileVersion": {
+      "type": "string",
+      "minLength": 1
+    },
+    "scanProfile": {
+      "const": "json-recursive-keys-and-strings/v1"
+    }
+  },
+  "description": "Verbatim shape of the frozen plan-v4.2 ScanBytesRequest draft."
+}

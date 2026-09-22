@@ -28,6 +28,7 @@ from .sanitize_service import (
     _IDENTIFIER_ALIAS_PREFIX,
     _now,
     load_ner_qualified,
+    ner_honesty_review,
     provider_build_digest,
 )
 from ..security.receipt_identity import ReceiptIdentity
@@ -180,13 +181,8 @@ class ScanPipeline:
                     page_plans.setdefault(idx, []).append((px, det.surface, det.entity_type))
 
         vault.resolve()
-        if not load_ner_qualified():
-            if dictionary is None:
-                review_reasons.add(ReviewReason.LOW_CONFIDENCE)
-            else:
-                for m in vault._mentions:
-                    if m.source not in _CONFIRMING_SOURCES:
-                        review_reasons.add(ReviewReason.LOW_CONFIDENCE)
+        review_reasons |= ner_honesty_review(vault, dictionary is not None,
+                                             registry)
         # manual boxes
         for mb in decisions.get("manual_boxes", []):
             if mb.get("document_id") not in (None, document_id):

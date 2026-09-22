@@ -1,0 +1,256 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://legal-cn-anonymizer.local/schemas/scan-bytes-report-v1.schema.json",
+  "title": "scan-bytes-report-v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "requestId",
+    "status",
+    "bodySha256",
+    "scannedByteLength",
+    "unscannedSegmentCount",
+    "alertCount",
+    "coverageStatement"
+  ],
+  "properties": {
+    "requestId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "enum": [
+        "complete",
+        "failed",
+        "timeout",
+        "unsupported_format",
+        "model_missing"
+      ]
+    },
+    "bodySha256": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "scannedByteLength": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "unscannedSegmentCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "alertCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "coverageStatement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "releaseProfileId",
+        "profileVersion",
+        "detectorStack",
+        "verifierStack",
+        "modelAssetsAvailable",
+        "benchmark"
+      ],
+      "properties": {
+        "releaseProfileId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "profileVersion": {
+          "type": "string",
+          "minLength": 1
+        },
+        "detectorStack": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "mechanism",
+              "modelId",
+              "modelVersion"
+            ],
+            "properties": {
+              "mechanism": {
+                "type": "string",
+                "minLength": 1
+              },
+              "modelId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "modelVersion": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "minItems": 0
+        },
+        "verifierStack": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "mechanism",
+              "modelId",
+              "modelVersion"
+            ],
+            "properties": {
+              "mechanism": {
+                "type": "string",
+                "minLength": 1
+              },
+              "modelId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "modelVersion": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "minItems": 0
+        },
+        "modelAssetsAvailable": {
+          "type": "boolean"
+        },
+        "benchmark": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "revision",
+                "sampleCount",
+                "overallRecall",
+                "personRecall",
+                "falsePositiveRate",
+                "evaluatedAt",
+                "claimScope"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "revision": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "sampleCount": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "overallRecall": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "hitCount",
+                    "groundTruthCount",
+                    "value"
+                  ],
+                  "properties": {
+                    "hitCount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "groundTruthCount": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "value": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1
+                    }
+                  }
+                },
+                "personRecall": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "hitCount",
+                        "groundTruthCount",
+                        "value"
+                      ],
+                      "properties": {
+                        "hitCount": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "groundTruthCount": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "value": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 1
+                        }
+                      }
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "falsePositiveRate": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "maskedNonSensitiveCharCount",
+                    "nonSensitiveCharCount",
+                    "value"
+                  ],
+                  "properties": {
+                    "maskedNonSensitiveCharCount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "nonSensitiveCharCount": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "value": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1
+                    }
+                  }
+                },
+                "evaluatedAt": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "claimScope": {
+                  "const": "specified_benchmark_only"
+                }
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "description": "Verbatim shape of the frozen plan-v4.2 runtime contract $defs/CoverageStatement."
+    }
+  },
+  "description": "A-side implementation of the frozen ScanBytesReport; never carries an egress receipt."
+}

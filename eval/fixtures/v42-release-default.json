@@ -1,0 +1,18 @@
+{
+  "release_profile_id": "cn-release-v42",
+  "profile_version": "1",
+  "detectors": [
+    "cn-rules",
+    "cluener-ner"
+  ],
+  "verifier": "gliner-ner",
+  "llm": {
+    "enabled": false
+  },
+  "benchmark_id": "v42-synthetic",
+  "thresholds": {
+    "overallRecall": 0.9,
+    "personRecall": 0.9,
+    "falsePositiveRate": 0.05
+  }
+}

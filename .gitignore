@@ -23,3 +23,6 @@ htmlcov/
 # Scrubbed / rehydrated artifacts are derivative working files.
 *.scrubbed.*
 examples/out/
+
+# NER weights: hash-locked in models/manifest.json, NEVER committed or shipped in the wheel (card 05 boundaries)
+models/ner/

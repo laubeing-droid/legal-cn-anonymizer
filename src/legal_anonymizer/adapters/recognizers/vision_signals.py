@@ -17,7 +17,7 @@ class CodeSignal:
 class VisionSignalProvider:
     def __init__(self, enabled: bool | None = None):
         try:
-            import zxingcpp  # noqa: F401
+            import zxingcpp
 
             self._zxing = zxingcpp
         except Exception:  # noqa: BLE001 - optional extra

@@ -1,0 +1,20 @@
+{
+  "status": "CLOSED_BLOCK/model_missing",
+  "missing_components": [
+    "llm: local Ollama not reachable/not started: URLError"
+  ],
+  "release_profile_id": "cn-release-v42-llm",
+  "profile_version": "1",
+  "modelAssetsAvailable": false,
+  "benchmark": null,
+  "machine": {
+    "system": "Windows 11",
+    "machine": "AMD64",
+    "python": "3.12.10",
+    "cpu_count": 12,
+    "pinned_threads": 4,
+    "torch": "2.14.0+cpu",
+    "transformers": "4.57.6",
+    "presidio_analyzer": "installed"
+  }
+}

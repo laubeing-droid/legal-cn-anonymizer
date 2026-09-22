@@ -503,6 +503,45 @@
             "independent_third_party_acceptance"
           ],
           "notes": "Windows RC build: wheel+sdist, models-cn-v1.zip (hash-locked PP-OCR models vendored under models/), consumer-protocol-v1.zip, PyInstaller onedir (smoke-tested: version/scan run; no one-file self-extraction), CycloneDX SBOM, provenance with git commit/tree, NOTICE + THIRD_PARTY_NOTICES, SHA256SUMS (926 entries incl. onedir), acceptance report. E2E scenarios A-F all PASS against the mock consumer. dist/ remains local (gitignored); no push, no tag, no release."
+        },
+        {
+          "wave": "V42-R1",
+          "status": "COMPLETED_LOCAL",
+          "spec": "jusbench-repo specs/construction/plan-v4/05-anonymizer卡.md (plan-v4.2)",
+          "baseline_commit": "c734e64be1e0380b5d1a640d34e841a78675e820",
+          "summary": {
+            "production_ner": "presidio_ner.py: NlpEngineProvider transformers engine, zh_core_web_sm + hash-locked uer/roberta-base-finetuned-cluener2020-chinese@cddd8fc2; real CLUENER BIOES labels (B/I/S-name,address,company,government,organization) normalized and mapped; book/game/movie/position/scene never masked; ASCII-only spans dropped as model noise; registry default = rules+NER; default-construction call sites enumerated: sanitize_service.py:141, docx_pipeline.py:119, pdf_pipeline.py:86, scan_pipeline.py:81, verify_service.py:100, scan_bytes_service.py:42, driven by cli.py command dispatch",
+            "race": "eval/results/v42/{cluener,gliner,release-default}.json + competition.md (all measured on frozen eval/fixtures/v42-synthetic.jsonl rev 146cff21..., 27 docs / 98 scored spans incl. adversarial novel-surname/single-given-name/short-org/address/negation/quoted/nested cases); GLiNER2 official gliner2 package",
+            "gates_measured": {
+              "release_default_overallRecall": "56/98",
+              "personRecall": "21/34",
+              "falsePositiveRate": "10/870",
+              "person_gate_90pct": "NOT MET",
+              "decision": "ner.qualified stays false; NER-only surfaces keep REVIEW_REQUIRED; no AUTO_READY qualification claimed"
+            },
+            "heterogeneous_verify": "verify_service v2 receipt: detector/verifier stacks+coverage published; same-model verifier rejected; production-miss counterexample (王某/赵某 via gliner_medium-v2.1@40ec419) forces privacy=FAIL with named ner_residual; missing verifier => REVIEW_REQUIRED",
+            "egress_contract": "coverage-statement/scan-bytes schemas generated verbatim from frozen plan-v4.2 draft $defs; pii.scan_bytes implemented (recomputes digests, scans every key/string, never issues receipts); consumer trustedConfigCheck reference refusals in tests/contract/test_coverage_refusal_v42.py",
+            "disposal": "application/disposal_service.py nine-step W15c-A (bridge-compatible signatures); tests/jusbench/test_disposal_product_v42.py 10 tests incl. restart-resume and no-empty-mapping-recreation"
+          },
+          "external_blockers": [
+            {
+              "id": "LLM-OPTION",
+              "status": "CLOSED_BLOCK_EXTERNAL",
+              "detail": "local Ollama qwen2.5:7b not running on this machine; eval/results/v42/release-llm.json records CLOSED_BLOCK/model_missing with exit 4 — the LLM-on track cannot be scored, and no default-config claim uses it"
+            },
+            {
+              "id": "PERSON-GATE",
+              "status": "OPEN_MEASURED",
+              "detail": "personRecall 61.8% < 90% on the frozen synthetic benchmark (bilingual gold docs + anonymized-party forms are the residual mass); recorded bottleneck, thresholds need separate adjudication per 05-4"
+            }
+          ],
+          "evidence": [
+            "eval/results/v42/",
+            "reports/v42/regression.xml",
+            "reports/v42/coverage.xml",
+            "reports/v42/product-disposal.xml",
+            "models/manifest.json (ner.release_models)"
+          ]
         }
       ]
     }

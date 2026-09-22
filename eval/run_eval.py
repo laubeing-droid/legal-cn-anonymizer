@@ -31,10 +31,11 @@ import time
 from typing import Dict, List, Set, Tuple
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.dirname(_HERE))   # repo root, for `vaultengine`
+sys.path.insert(0, os.path.dirname(_HERE))            # repo root
+sys.path.insert(0, os.path.join(os.path.dirname(_HERE), "src"))
 sys.path.insert(0, _HERE)                     # eval/, for the optional `adapters`
 
-from vaultengine import Config, deidentify  # noqa: E402
+from legal_anonymizer import Config, deidentify  # noqa: E402
 
 # Recall is scored over the categories a de-identifier is expected to remove.
 # (role/date are annotated for fair precision matching but not scored — they are
@@ -176,14 +177,18 @@ def main() -> int:
             f"vault-engine ({args.model})", docs,
             lambda d: vault_flagged(d["text"], llm_cfg)))
 
-    # 3) Presidio (optional)
+    # 3) Presidio (optional) — a failure is NAMED and non-zero, never a
+    # silent "跳过" with exit 0 (plan-v4.2 card 05-4 legacy baseline row)
+    presidio_failure: str | None = None
     if args.with_presidio:
         try:
             results.append(run_engine(
                 "Microsoft Presidio", docs,
                 lambda d: (presidio_flagged(d["text"], d["lang"]), True)))
         except Exception as exc:  # noqa: BLE001
-            print(f"[presidio] 跳过（未安装或加载失败）：{exc}", file=sys.stderr)
+            presidio_failure = f"{type(exc).__name__}: {exc}"
+            print(f"[presidio] CLOSED failure (not skipped): {presidio_failure}",
+                  file=sys.stderr)
 
     table = render(results)
     print(table)
@@ -199,6 +204,8 @@ def main() -> int:
         with open(args.out, "w", encoding="utf-8") as fh:
             fh.write("# Detection benchmark\n\n" + table + "\n")
         print(f"\n→ {args.out}", file=sys.stderr)
+    if presidio_failure:
+        return 4
     return 0
 
 
