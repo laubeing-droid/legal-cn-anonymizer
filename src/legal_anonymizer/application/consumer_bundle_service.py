@@ -28,6 +28,39 @@ class HandoffError(ValueError):
     error_code = "harness_bundle_invalid"
 
 
+# Caller-declared source manifest fields the bridge-side external-ref resolver
+# reads (providers.py _external_ref_resolver). Anything outside this closure is
+# refused fail-closed — a handoff must not carry unreviewed declarations.
+_MANIFEST_FIELDS = ("documentId", "sourceKind", "declaredPageCount",
+                    "availablePageCount", "parsedPages", "failedPages",
+                    "coverage", "reviewRequired", "redactionVersion",
+                    "parserProfileVersion", "payloadDigest")
+
+
+def _validate_manifest(manifest: dict) -> dict:
+    unknown = sorted(set(manifest) - set(_MANIFEST_FIELDS))
+    if unknown:
+        raise HandoffError(
+            f"manifest carries fields outside the frozen closure: {unknown}"
+        )
+    document_id = manifest.get("documentId")
+    if document_id is not None and (not isinstance(document_id, str)
+                                    or not document_id.strip()):
+        raise HandoffError("manifest.documentId must be a non-empty string")
+    payload_digest = manifest.get("payloadDigest")
+    if payload_digest is not None and (not isinstance(payload_digest, str)
+                                       or not payload_digest.strip()):
+        raise HandoffError("manifest.payloadDigest must be a non-empty string")
+    for list_field in ("parsedPages", "failedPages"):
+        if list_field in manifest and not isinstance(manifest[list_field], list):
+            raise HandoffError(f"manifest.{list_field} must be a list")
+    text = json.dumps(manifest, ensure_ascii=False)
+    for marker in _FORBIDDEN_MARKERS:
+        if marker in text:
+            raise HandoffError(f"private field marker {marker!r} found in manifest")
+    return {k: manifest[k] for k in _MANIFEST_FIELDS if k in manifest}
+
+
 def _now() -> str:
     import datetime as _dt
 
@@ -71,7 +104,8 @@ def structured_objects(state: MatterState) -> list[dict]:
 
 
 def build_harness_handoff(state_root: Path, matter_id: str, out_dir: Path,
-                          source_dir: Path | None = None) -> dict:
+                          source_dir: Path | None = None,
+                          manifest: dict | None = None) -> dict:
     state = MatterState.load(state_root, matter_id)
     public = state.read_public()
     out_dir = Path(out_dir)
@@ -180,6 +214,21 @@ def build_harness_handoff(state_root: Path, matter_id: str, out_dir: Path,
     (out_dir / "material-input.json").write_text(
         json.dumps(material_input, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
+    if manifest is not None:
+        # bridge channel: publish the caller-declared source manifest next to
+        # the bundle so the bridge-side external-ref resolver can bind it;
+        # verified bundle facts are stamped from THIS side, never trusted
+        source_manifest = _validate_manifest(manifest)
+        source_manifest.update({
+            "schema_version": "1.0",
+            "matterId": matter_id,
+            "bundleHash": canonical_hash(bundle, schema_version="1.0"),
+            "artifactCount": len(artifacts),
+        })
+        (out_dir / "source-manifest.json").write_text(
+            json.dumps(source_manifest, ensure_ascii=False, indent=2,
+                       sort_keys=True) + "\n", encoding="utf-8"
+        )
     return {
         "bundle_dir": str(out_dir),
         "artifact_count": len(artifacts),
