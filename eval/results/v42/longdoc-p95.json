@@ -1,0 +1,60 @@
+{
+  "status": "MEASURED",
+  "benchmark": "longdoc-1000cjk",
+  "cjkCharacters": 1000,
+  "chunkCjk": 450,
+  "chunkCount": 3,
+  "engine": {
+    "detectorStack": [
+      {
+        "mechanism": "deterministic-regex",
+        "modelId": "cn-rules",
+        "modelVersion": "1.0"
+      },
+      {
+        "mechanism": "transformers-token-classification",
+        "modelId": "uer/roberta-base-finetuned-cluener2020-chinese",
+        "modelVersion": "cddd8fc233e373855a8c0a7f4b7eb83acb686a2b"
+      }
+    ],
+    "registry": "rules+CLUENER (RecognizerRegistry default)"
+  },
+  "warmupRuns": 3,
+  "timedRuns": 20,
+  "measurements": {
+    "rawSingleShot": {
+      "p50": 66.7,
+      "p95": 88.3,
+      "detectionsPerRun": {
+        "min": 20,
+        "max": 20
+      },
+      "meaning": "unmodified production path on a 1000-char doc; NER annotation is SKIPPED by spacy_huggingface_pipelines (doc exceeds the model's 512-token budget) — rules only"
+    },
+    "chunkedFullCoverage": {
+      "p50": 221.3,
+      "p95": 310.5,
+      "detectionsPerRun": {
+        "min": 22,
+        "max": 22
+      },
+      "meaning": "document split into 3 chunks of <= 450 CJK chars, serially scanned; latency is the per-run sum — every character reaches the NER engine"
+    }
+  },
+  "latencyMs": {
+    "p50": 221.3,
+    "p95": 310.5,
+    "gate": 2000.0,
+    "gatePass": true,
+    "gateBasis": "chunkedFullCoverage"
+  },
+  "machine": {
+    "system": "Windows 11",
+    "machine": "AMD64",
+    "python": "3.12.10",
+    "cpu_count": 12,
+    "pinned_threads": 4,
+    "torch": "2.14.0+cpu"
+  },
+  "note": "synthetic document; surfaces never printed; same methodology as eval/evaluate_release.py (perf_counter, warm-up excluded, quantiles n=20). BOTH readings are recorded: the raw path silently drops NER on long docs — that production boundary is named here and NOT papered over by the chunked gate measurement."
+}
