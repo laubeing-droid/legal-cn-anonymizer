@@ -91,20 +91,53 @@ Evidence: test suites under `tests/` (207 tests), `dist/acceptance-report.json`,
 Baseline `cd7a811` (V42-R1 handoff), tree clean. All work against the frozen
 bridge contract (`jusbench-repo/bridge/jusbench_bridge/providers.py`, read-only,
 never modified). Wave commits, in order: `51d15e8` → `a50ac65` → `86a49ad` →
-`a4da664` → `d9eb15e`.
+`a4da664` → `d9eb15e` → contract-correction commit.
 
-1. **Bridge contract trio** (`51d15e8`): `pii_scan_service.scan_release_payload`
-   (report shaped to frozen `scan-bytes-report-v1`; every exception carries a
-   `.code` string; timeout/model_missing/unsupported-profile are visible
-   degradations; never an egress receipt), `ingest_service`
+**Contract correction (公开改口, after direct plan-v4.2 source check).** The
+trio below was first built from the bridge code + handoff wording only. When
+asked, the frozen sources were read directly (05-anonymizer卡.md,
+`contracts/source/methods-core.json`, `contracts/schemas/ifc-2.schema.json`,
+`common.schema.json`, `source/types-ifc2.json`) and three real deviations
+were found and fixed:
+
+- **pii.scan** had been implemented as an inline-payload variant of
+  scan_bytes. The frozen contract is a FILE-SET scan:
+  `PiiScanRequest{payloadRoot, expectedFiles, expectedPayloadDigest}` →
+  `PiiScanReport{tool, toolVersion, ruleVersion, status, expectedFiles,
+  actualScannedFiles, payloadDigest, alertCount, alerts[{file, rule,
+  detail}]}` + `PiiScanReportAddition{coverageStatement}`; set digest = IF-03
+  formula `sha256(sorted "rel\nsha256hex\n" concat)`, bare hex; success =
+  complete ∧ expected==actual ∧ digest matches ∧ alertCount==0; error
+  envelopes stay inside `payload_modified / scan_incomplete /
+  unsupported_format / timeout` (model-missing now fails
+  `scan_incomplete`, not a `model_missing` report status). Alerts carry
+  span offsets only — surfaces never echoed.
+- **ingest.*** had invented states/codes. Now: submit returns `{jobId}`
+  exactly (wire output); status carries the frozen state enum
+  `queued/running/waiting_review/done/error/cancelled` +
+  `stage/completedUnits/totalUnits/resultRefs/error(RpcErrorBody)`;
+  cancel/resume return `Saved{ref, revision, changeSeq, receipt}` and are
+  idempotent on terminal jobs; error codes narrowed to the frozen
+  `unsupported_format/ref_not_found`.
+- **build_harness_handoff manifest=** had a resolver-derived whitelist with
+  an invented `payloadDigest` field. Now validated against the frozen
+  `HandoffManifest` closure (`manifestVersion` pinned `"1.1"`, 17 required
+  fields, `additionalProperties=false`, sourceKind/coverage enums); result
+  carries `receiptRef` (+`manifestRef` when a manifest was written) per the
+  wire output closure `{bundleRef, receiptRef, manifestRef}`.
+
+`tests/jusbench/test_bridge_contracts_v42.py` was rewritten against the
+frozen shapes (25 cases incl. an IF-03 formula reference check).
+
+1. **Bridge contract trio** (`51d15e8` + correction commit):
+   `pii_scan_service.scan_release_payload(request, timeout_seconds=None)`
+   per the frozen file-set contract above; `ingest_service`
    (`ingest_submit/_status/_cancel/_resume` over per-job ledgers; read-only
    snapshots — digests/sizes/formats only, contents never enter the ledger;
-   `hash_mismatch` fail-closed on resume), and `build_harness_handoff` now
-   accepts the bridge's `manifest=` kwarg (validated against the frozen
-   resolver field closure, unknown fields refused fail-closed, verified bundle
-   facts stamped on this side; `manifest=None` keeps prior behavior).
-   21 synthetic tests in the exact bridge call shapes over real
-   registry/ledger/signature chains.
+   `hash_mismatch` fail-closed on resume); `build_harness_handoff` accepts
+   the bridge's `manifest=` kwarg per the frozen HandoffManifest closure
+   (`manifest=None` keeps prior behavior). All in the exact bridge call
+   shapes over real registry/ledger/signature chains.
 2. **Release artifacts rebuilt** (`a50ac65`): the 19 generated contract
    schemas now ship in wheel+sdist (package-data; previously missing from
    wheels), SBOM covers the presidio/ner-race/markitdown extras (26
@@ -155,5 +188,5 @@ Items recorded as adjudication/other-repo evidence only (nothing touched):
   not re-implemented here.
 
 Full-suite regression: `python -B -m pytest -q -p no:cacheprovider tests` →
-**286 passed / 0 failed** (`reports/v42/regression.xml`; 248 baseline + 38
+**289 passed / 0 failed** (`reports/v42/regression.xml`; 248 baseline + 41
 new). `git diff --check` clean per wave.

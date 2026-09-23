@@ -13,10 +13,8 @@ from pathlib import Path
 
 from ..contracts.canonical import canonical_hash
 from ..contracts.models import SanitizationStatus
-from ..contracts.signatures import SignatureError
-from .review_service import ReviewError
-from .state import MatterState, MatterStateError
 from ..security.receipt_identity import ReceiptIdentity
+from .state import MatterState
 
 _FORBIDDEN_MARKERS = ("canonical_surface", '"surface"', "matter_secret", "original_filename")
 
@@ -28,13 +26,26 @@ class HandoffError(ValueError):
     error_code = "harness_bundle_invalid"
 
 
-# Caller-declared source manifest fields the bridge-side external-ref resolver
-# reads (providers.py _external_ref_resolver). Anything outside this closure is
-# refused fail-closed — a handoff must not carry unreviewed declarations.
-_MANIFEST_FIELDS = ("documentId", "sourceKind", "declaredPageCount",
+# Caller-declared source manifest: the frozen HandoffManifest shape
+# (jusbench ifc-2.schema.json, read-only over there) — 17 required fields +
+# one optional legacy note, additionalProperties=false, manifestVersion is
+# pinned to "1.1". Anything outside this closure is refused fail-closed.
+_MANIFEST_FIELDS = ("manifestVersion", "documentId", "sourceKind",
+                    "sourceFormat", "sourceVersion", "declaredPageCount",
                     "availablePageCount", "parsedPages", "failedPages",
-                    "coverage", "reviewRequired", "redactionVersion",
-                    "parserProfileVersion", "payloadDigest")
+                    "ocrEngineVersion", "parserProfileVersion",
+                    "redactionVersion", "reviewRequired", "reviewReceiptRef",
+                    "blocksManifestRef", "tablesManifestRef", "coverage",
+                    "legacyV1MigrationNoteRef")
+_MANIFEST_REQUIRED = ("manifestVersion", "documentId", "sourceKind",
+                      "sourceFormat", "sourceVersion", "declaredPageCount",
+                      "availablePageCount", "parsedPages", "failedPages",
+                      "ocrEngineVersion", "parserProfileVersion",
+                      "redactionVersion", "reviewRequired", "reviewReceiptRef",
+                      "blocksManifestRef", "tablesManifestRef", "coverage")
+_SOURCE_KINDS = ("digital_text", "scan", "image", "office", "web_capture",
+                 "unknown")
+_COVERAGE_VALUES = ("complete", "partial", "unknown")
 
 
 def _validate_manifest(manifest: dict) -> dict:
@@ -43,18 +54,33 @@ def _validate_manifest(manifest: dict) -> dict:
         raise HandoffError(
             f"manifest carries fields outside the frozen closure: {unknown}"
         )
-    document_id = manifest.get("documentId")
-    if document_id is not None and (not isinstance(document_id, str)
-                                    or not document_id.strip()):
+    missing = [f for f in _MANIFEST_REQUIRED if f not in manifest]
+    if missing:
+        raise HandoffError(f"manifest missing required fields: {missing}")
+    if manifest["manifestVersion"] != "1.1":
+        raise HandoffError(
+            f"manifestVersion must be '1.1', got {manifest['manifestVersion']!r}")
+    if manifest["sourceKind"] not in _SOURCE_KINDS:
+        raise HandoffError(
+            f"manifest.sourceKind {manifest['sourceKind']!r} outside the frozen enum")
+    if manifest["coverage"] not in _COVERAGE_VALUES:
+        raise HandoffError(
+            f"manifest.coverage {manifest['coverage']!r} outside the frozen enum")
+    if not isinstance(manifest["documentId"], str) or not manifest["documentId"].strip():
         raise HandoffError("manifest.documentId must be a non-empty string")
-    payload_digest = manifest.get("payloadDigest")
-    if payload_digest is not None and (not isinstance(payload_digest, str)
-                                       or not payload_digest.strip()):
-        raise HandoffError("manifest.payloadDigest must be a non-empty string")
+    if not isinstance(manifest["reviewRequired"], bool):
+        raise HandoffError("manifest.reviewRequired must be a boolean")
     for list_field in ("parsedPages", "failedPages"):
-        if list_field in manifest and not isinstance(manifest[list_field], list):
-            raise HandoffError(f"manifest.{list_field} must be a list")
-    text = json.dumps(manifest, ensure_ascii=False)
+        value = manifest[list_field]
+        if not isinstance(value, list) or \
+                not all(isinstance(p, int) and not isinstance(p, bool) for p in value):
+            raise HandoffError(f"manifest.{list_field} must be a list of integers")
+    for nullable_str in ("sourceFormat", "sourceVersion", "ocrEngineVersion",
+                         "parserProfileVersion", "redactionVersion"):
+        value = manifest[nullable_str]
+        if value is not None and not isinstance(value, str):
+            raise HandoffError(f"manifest.{nullable_str} must be a string or null")
+    text = json.dumps(manifest, ensure_ascii=False, default=str)
     for marker in _FORBIDDEN_MARKERS:
         if marker in text:
             raise HandoffError(f"private field marker {marker!r} found in manifest")
@@ -64,7 +90,7 @@ def _validate_manifest(manifest: dict) -> dict:
 def _now() -> str:
     import datetime as _dt
 
-    return _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return _dt.datetime.now(_dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def structured_objects(state: MatterState) -> list[dict]:
@@ -220,18 +246,35 @@ def build_harness_handoff(state_root: Path, matter_id: str, out_dir: Path,
         # verified bundle facts are stamped from THIS side, never trusted
         source_manifest = _validate_manifest(manifest)
         source_manifest.update({
-            "schema_version": "1.0",
-            "matterId": matter_id,
             "bundleHash": canonical_hash(bundle, schema_version="1.0"),
             "artifactCount": len(artifacts),
+            "matterId": matter_id,
+            "writtenAt": _now(),
         })
         (out_dir / "source-manifest.json").write_text(
             json.dumps(source_manifest, ensure_ascii=False, indent=2,
                        sort_keys=True) + "\n", encoding="utf-8"
         )
-    return {
+    receipt_digest = hashlib.sha256(
+        json.dumps(src_receipt, ensure_ascii=False, sort_keys=True)
+        .encode("utf-8")).hexdigest()
+    result = {
         "bundle_dir": str(out_dir),
         "artifact_count": len(artifacts),
         "structured_objects": len(objects),
         "bundle_hash": canonical_hash(bundle, schema_version="1.0"),
+        # wire output closure (methods-core anon.build_harness_handoff):
+        # {bundleRef, receiptRef, manifestRef}; the bridge stamps bundleRef
+        "receipt_ref": {
+            "owner": "anonymizer", "kind": "sanitization-receipt",
+            "id": f"{matter_id}-sanitization-receipt", "version": "1",
+            "matterId": matter_id, "digest": receipt_digest,
+        },
     }
+    if manifest is not None:
+        result["manifest_ref"] = {
+            "owner": "anonymizer", "kind": "source-manifest",
+            "id": manifest["documentId"], "version": "1",
+            "matterId": matter_id, "digest": None,
+        }
+    return result
