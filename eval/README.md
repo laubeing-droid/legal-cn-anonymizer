@@ -69,3 +69,24 @@ If a language model isn't installed, Presidio scores an empty set for those docs
 - Recall here means "flagged for redaction," not a guarantee of
   non-identifiability. Quasi-identifier combinations and writing style are out of
   scope of this metric (see the main README's threat model).
+
+## plan-v4.2 release benchmarks (v42)
+
+Beyond the legacy harness above, two measured-release entries live in this
+directory. Numbers are only valid for the exact tested release configuration
+and dataset — never quoted as a general capability claim.
+
+- `evaluate_release.py` — scores the production registry (rules + Chinese NER)
+  against the frozen synthetic set `fixtures/v42-synthetic.jsonl`
+  (revision-pinned, per-document hashes in `fixtures/v42-synthetic.manifest.json`;
+  the dataset is frozen — any change is a new benchmark revision). Per-engine
+  reports and the CLUENER vs GLiNER comparison land in `results/v42/`.
+- `longdoc_benchmark.py` — dedicated 1000-Chinese-character latency benchmark
+  (p95 ≤ 2 s budget on CPU). Records BOTH readings: the raw single-shot path
+  (where `spacy_huggingface_pipelines` silently skips NER beyond the model's
+  512-token budget — rules only) and chunked full coverage, with the gate
+  judged on the latter. Results: `results/v42/longdoc-p95.{json,md}`.
+
+Authoritative status, gates and the recorded person-recall shortfall live in
+[`docs/construction/S0-S12-STATUS.md`](../docs/construction/S0-S12-STATUS.md);
+paper/model-card F1 numbers are never substituted for local measurements.
