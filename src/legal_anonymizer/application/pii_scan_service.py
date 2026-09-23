@@ -25,7 +25,7 @@ from .coverage_service import (
     RELEASE_PROFILE_VERSION,
     build_coverage_statement,
 )
-from .scan_bytes_service import SCAN_PROFILE, _MAX_DEPTH, _scan_strings
+from .scan_bytes_service import _MAX_DEPTH, SCAN_PROFILE, _scan_strings
 
 
 class PiiScanError(ValueError):

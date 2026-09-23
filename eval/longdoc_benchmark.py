@@ -55,8 +55,8 @@ def _pin_cpu_threads() -> None:
 
         torch.set_num_threads(CPU_THREADS)
         torch.set_num_interop_threads(1)
-    except Exception:  # noqa: BLE001 - reported via machine info below
-        pass
+    except Exception as exc:  # noqa: BLE001 - reported via machine info below
+        print(f"note: torch thread pinning skipped: {type(exc).__name__}")
 
 
 def _machine_info() -> dict:
@@ -159,7 +159,7 @@ def main() -> int:
     # (b) chunked full coverage: every character really reaches the NER
     # engine; per-run latency is the serial sum over all chunks (the honest
     # end-to-end cost of processing the whole document).
-    chunked = measure(lambda: sum((registry.detect(c) for c in chunks), []))
+    chunked = measure(lambda: [d for c in chunks for d in registry.detect(c)])
 
     gate_pass = chunked["p95"] <= GATE_P95_MS
 
@@ -211,30 +211,30 @@ def main() -> int:
         "# 1000 中文字符长文时延单基准（V42-R2 项 8）",
         "",
         f"- 状态: {report['status']}（合成文档，仅本机实测，原文不打印）",
-        f"- 引擎: {report['engine']['registry']}；预热 {WARMUP_RUNS} 次 + 计时 "
-        f"{TIMED_RUNS} 次；CPU 线程钉定 {CPU_THREADS}",
+        (f"- 引擎: {report['engine']['registry']}；预热 {WARMUP_RUNS} 次 + 计时 "
+         f"{TIMED_RUNS} 次；CPU 线程钉定 {CPU_THREADS}"),
         "",
         "| 口径 | p50 | p95 | 每轮检出数 | 含义 |",
         "|---|---|---|---|---|",
-        f"| 整文直通 | {raw['p50']} ms | {raw['p95']} ms | "
-        f"{raw['detectionsPerRun']['min']}–{raw['detectionsPerRun']['max']} | "
-        "生产现行路径：超 512 token 时 spacy_huggingface_pipelines 跳过整篇 "
-        "NER 注解（warning: \"Unable to process, skipping annotation\"），实际"
-        "只有规则在工作——该数字不用于门判定 |",
-        f"| 分块全覆盖（{len(chunks)} 块 ×≤{CHUNK_CJK} 字） | "
-        f"{chunked['p50']} ms | {chunked['p95']} ms | "
-        f"{chunked['detectionsPerRun']['min']}–"
-        f"{chunked['detectionsPerRun']['max']} | 每个字符都真正经过 NER；"
-        "时延为逐块串行之和 |",
+        (f"| 整文直通 | {raw['p50']} ms | {raw['p95']} ms | "
+         f"{raw['detectionsPerRun']['min']}–{raw['detectionsPerRun']['max']} | "
+         "生产现行路径：超 512 token 时 spacy_huggingface_pipelines 跳过整篇 "
+         "NER 注解（warning: \"Unable to process, skipping annotation\"），实际"
+         "只有规则在工作——该数字不用于门判定 |"),
+        (f"| 分块全覆盖（{len(chunks)} 块 ×≤{CHUNK_CJK} 字） | "
+         f"{chunked['p50']} ms | {chunked['p95']} ms | "
+         f"{chunked['detectionsPerRun']['min']}–"
+         f"{chunked['detectionsPerRun']['max']} | 每个字符都真正经过 NER；"
+         "时延为逐块串行之和 |"),
         "",
-        f"- 门（1000 中文字符 p95 ≤ 2 s，按分块全覆盖口径）: "
-        f"{'PASS' if gate_pass else 'FAIL'}",
-        "- 具名边界（记录，不擅修）：生产识别器对超过 CLUENER 512 token 预算的"
-        "文档会静默失去 NER 覆盖（规则仍生效）；修复（生产管线内分块）属 "
-        "NER 行为变更，需单独裁定，本轮不动。",
+        (f"- 门（1000 中文字符 p95 ≤ 2 s，按分块全覆盖口径）: "
+         f"{'PASS' if gate_pass else 'FAIL'}"),
+        ("- 具名边界（记录，不擅修）：生产识别器对超过 CLUENER 512 token 预算的"
+         "文档会静默失去 NER 覆盖（规则仍生效）；修复（生产管线内分块）属 "
+         "NER 行为变更，需单独裁定，本轮不动。"),
         "",
-        "方法论与 eval/evaluate_release.py 同口径（perf_counter、预热排除、"
-        "quantiles n=20）；机器信息见 longdoc-p95.json。实测数字，不引论文值。",
+        ("方法论与 eval/evaluate_release.py 同口径（perf_counter、预热排除、"
+         "quantiles n=20）；机器信息见 longdoc-p95.json。实测数字，不引论文值。"),
         "",
     ]
     (out_dir / "longdoc-p95.md").write_text("\n".join(md), encoding="utf-8")

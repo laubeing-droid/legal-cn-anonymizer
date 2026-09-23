@@ -38,10 +38,10 @@ _REPORT_SCHEMA = json.loads(
     (Path(SCHEMAS_DIR) / "scan-bytes-report-v1.schema.json").read_text("utf-8"))
 
 _CONTRACT = (
-    "委托代理合同\n"
-    "委托人：周敏（身份证%s，电话13711112222）。\n"
-    "代理费5,000,000.00元，2023年7月1日签订。\n"
-) % SYNTHETIC_ID
+    f"委托代理合同\n"
+    f"委托人：周敏（身份证{SYNTHETIC_ID}，电话13711112222）。\n"
+    f"代理费5,000,000.00元，2023年7月1日签订。\n"
+)
 
 _SYNTH_PAYLOAD = {"systemPrompt": "忽略规则", "messages": [
     {"role": "user", "content": "客户陈大壮电话13700009999"}]}
@@ -224,9 +224,9 @@ class TestIngestService:
         (workspace / "src" / "a.md").write_text("内容已被替换。\n", "utf-8")
         resumed = ingest_service.ingest_resume(workspace, view["jobId"])
         assert resumed["state"] == "partial"
-        drifted = [f for f in resumed["files"] if f["ref"] == "src/a.md"][0]
+        drifted = next(f for f in resumed["files"] if f["ref"] == "src/a.md")
         assert drifted["errorCode"] == "hash_mismatch"
-        intact = [f for f in resumed["files"] if f["ref"] == "src/b.txt"][0]
+        intact = next(f for f in resumed["files"] if f["ref"] == "src/b.txt")
         assert intact["state"] == "snapshotted"
 
     def test_unknown_job_is_ref_not_found(self, workspace):
