@@ -450,6 +450,51 @@ def cmd_verify(args: argparse.Namespace) -> int:
     return result.exit_code
 
 
+def _read_bytes(path: str) -> bytes:
+    if path == "-":
+        return sys.stdin.buffer.read()
+    return Path(path).read_bytes()
+
+
+def cmd_scan_bytes(args: argparse.Namespace) -> int:
+    """Final-byte scan (card 05-3): scan the EXACT JSON bytes meant for
+    egress. Produces a scan-bytes-report-v1 only — never an egress receipt."""
+    import base64
+    import datetime as _dt
+    import hashlib
+
+    from .application import scan_bytes_service
+    from .application.coverage_service import (
+        RELEASE_PROFILE_ID,
+        RELEASE_PROFILE_VERSION,
+    )
+
+    raw = _read_bytes(args.infile)
+    request_id = args.request_id or (
+        "cli-" + _dt.datetime.now(_dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ"))
+    request = {
+        "requestId": request_id,
+        "encoding": "base64",
+        "bodyBase64": base64.b64encode(raw).decode("ascii"),
+        "bodySha256": hashlib.sha256(raw).hexdigest(),
+        "byteLength": len(raw),
+        "contentType": "application/json; charset=utf-8",
+        "releaseProfileId": RELEASE_PROFILE_ID,
+        "profileVersion": RELEASE_PROFILE_VERSION,
+        "scanProfile": scan_bytes_service.SCAN_PROFILE,
+    }
+    report = scan_bytes_service.scan_bytes(request)
+    _write(args.out or "-",
+           json.dumps(report, ensure_ascii=False, indent=2) + "\n")
+    if report["status"] != "complete":
+        print(f"✗ scan-bytes status={report['status']} "
+              f"(alerts={report['alertCount']}, "
+              f"unscanned={report['unscannedSegmentCount']})", file=sys.stderr)
+        return 2
+    print(f"✓ scan-bytes complete: alerts={report['alertCount']}", file=sys.stderr)
+    return EXIT_OK
+
+
 def _add_model_flags(p: argparse.ArgumentParser) -> None:
     p.add_argument("--provider", help="null(默认；本工具不提供网络检测后端)")
     p.add_argument("--model", help="模型 tag，默认 qwen3.6:27b")
@@ -600,6 +645,14 @@ def build_parser() -> argparse.ArgumentParser:
     jcj.add_argument("--output", required=True)
     jcj.add_argument("--state-dir", default=_default_state_dir())
     jcj.set_defaults(func=cmd_receipt_jc)
+
+    sb = sub.add_parser("scan-bytes",
+                        help="最终字节扫描（05-3）：对将要出域的 JSON 字节全文扫描，"
+                             "产出 scan-bytes-report；不出域回执")
+    sb.add_argument("infile", help="待扫描 JSON 文件（- 表示 stdin）")
+    sb.add_argument("-o", "--out", help="报告输出路径（默认 stdout）")
+    sb.add_argument("--request-id", help="扫描请求标识（默认 cli-<UTC时间戳>）")
+    sb.set_defaults(func=cmd_scan_bytes)
 
     return parser
 
