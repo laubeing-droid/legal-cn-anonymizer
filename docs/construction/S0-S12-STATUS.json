@@ -542,6 +542,51 @@
             "reports/v42/product-disposal.xml",
             "models/manifest.json (ner.release_models)"
           ]
+        },
+        {
+          "wave": "V42-R2",
+          "status": "COMPLETED_LOCAL",
+          "spec": "docs/construction/HANDOFF-V42-R2.md section 3 debt ledger (items 1/2/6/7/8 implemented; 3/4/5 recorded as adjudication/other-repo evidence only)",
+          "baseline_commit": "cd7a811d3359873499b9eba98655fcf45794ee39",
+          "commits": [
+            "51d15e8 bridge contract trio: pii_scan_service + ingest_service + build_harness_handoff manifest kwarg (+21 tests)",
+            "a50ac65 release artifacts rebuilt: schemas in wheel, extras in SBOM, model redistribution notices",
+            "86a49ad offline model install/verify script (+8 tests)",
+            "a4da664 CLI scan-bytes subcommand (+4 tests)",
+            "d9eb15e 1000-CJK long-document p95 benchmark (dual reading, gate on chunked full coverage)"
+          ],
+          "summary": {
+            "bridge_contract_trio": "application/pii_scan_service.py scan_release_payload(request, timeout_seconds=None): report shaped to frozen scan-bytes-report-v1, all exceptions carry .code (bridge translates verbatim to RpcError), timeout/model_missing/unsupported-profile are visible degradations, no egress receipt. application/ingest_service.py ingest_submit/_status/_cancel/_resume over per-job ledgers under <state_root>/ingest-jobs/ (read-only snapshots: sha256/size/format only, contents never in the ledger; hash_mismatch fail-closed on resume; codes schema_invalid/ref_not_found/conflict). consumer_bundle_service.build_harness_handoff accepts the bridge's manifest= kwarg: validated against the frozen resolver field closure (unknown fields refused fail-closed), verified bundle facts stamped this side, writes source-manifest.json; manifest=None keeps previous behavior. Bridge providers.py read-only, never modified; modules import lightweight (bridge availability probe passes).",
+            "release_artifacts": "pyproject package-data ships the 19 generated contract schemas in wheel+sdist (previously missing from wheels); THIRD_PARTY_NOTICES.md gains redistribution records for CLUENER RoBERTa (MIT, ydli-bgoc/UnionLab), GLiNER medium-v2.1 and gliner2-base (Apache-2.0), zh_core_web_sm (MIT); build_sbom.py DIRECT covers presidio/ner-race/markitdown extras (26 components) + dataAssets hash-lock block for all 19 schemas; rebuilt wheel/sdist (verified: 19 schemas in-wheel, zero weight files, new bridge modules included), SBOM, provenance (926 artifacts), SHA256SUMS (926 entries), acceptance report LOCAL_RC_WITH_EXTERNAL_BLOCKERS; verify_no_private_artifacts + verify_distribution PASS; dist/ stays local (gitignored)",
+            "offline_install": "scripts/install_offline_models.py: offline pack (dir/zip, models/ layout) -> <repo>/models/ with full non-short-circuit hash-lock verification (missing/hash_mismatch/size_mismatch, exit 1 named failures); trust anchor is the REPO's manifest (a pack cannot silently re-pin its own hashes; --accept-manifest for explicit re-pin); zip-slip guarded; zero network; wheels still carry no weights; real-repo run verifies 3 locked assets (2.81 GB) PASS",
+            "cli_scan_bytes": "vault-engine scan-bytes INFILE|- : strict request construction (recomputed sha256/byteLength, frozen profile ids), report to stdout or -o, exit 0 only on complete coverage, 2 otherwise; never issues an egress receipt",
+            "longdoc_latency": "eval/longdoc_benchmark.py on an exact-1000-CJK synthetic contract, same methodology as evaluate_release (warm-up excluded, quantiles n=20, 4 pinned threads). TWO readings recorded: raw single-shot p95 88.3 ms is NOT the gate — spacy_huggingface_pipelines skips NER annotation entirely beyond CLUENER's 512-token budget ('Unable to process, skipping annotation'), so only rules run; chunked full coverage (3 chunks x <=450 CJK, serial sum) p50 221.3 / p95 310.5 ms, detections 22 vs 20 confirming real NER contribution. GATE (1000 chars p95 <= 2s): PASS on the chunked basis. Long-doc NER coverage loss on the unmodified production path is a NAMED boundary; fixing it is an NER-behavior change requiring separate adjudication.",
+            "adjudication_only_items": {
+              "item3_person_gate": "personRecall 21/34=61.8% < 90%; three candidate routes (deterministic-party-rules expansion / user-dictionary operations / fine-tune or swap Chinese NER) remain recorded in HANDOFF + competition.md; gate changes require separate user adjudication — nothing touched this wave",
+              "item4_card_discrepancy": "plan-v4.2 card 05-4 cites a pre-existing W15c-A 'tests/jusbench/test_disposal.py (13 cases)' which does not exist anywhere in this repo or the product checkout; V42-R1 shipped the product nine-step test directly (tests/jusbench/test_disposal_product_v42.py); the card-side premise needs correction on the card owner's side — recorded here, no other-repo edit",
+              "item5_egress_gates_other_repo": "EgressReceipt issuance and trustedConfigCheck production enforcement belong to the 01 main process; consumer-side refusals (jobs.py/trust.py/pii.py) live outside this repo; the A side only carries the test reference implementation (tests/contract/test_coverage_refusal_v42.py consumer_trusted_check) — intentionally NOT re-implemented here"
+            }
+          },
+          "external_blockers": [
+            {
+              "id": "PERSON-GATE",
+              "status": "OPEN_MEASURED",
+              "detail": "unchanged from V42-R1: personRecall 61.8% < 90%; three candidate routes await user adjudication (see adjudication_only_items.item3)"
+            },
+            {
+              "id": "LONGDOC-NER-COVERAGE",
+              "status": "OPEN_NAMED_BOUNDARY",
+              "detail": "production recognizer silently loses NER coverage on documents beyond CLUENER's 512-token budget (measured in eval/results/v42/longdoc-p95.json); pipeline-level chunking is an NER-behavior change needing separate sign-off"
+            }
+          ],
+          "evidence": [
+            "reports/v42/regression.xml (286 passed / 0 failed; 248 baseline + 38 new)",
+            "tests/jusbench/test_bridge_contracts_v42.py",
+            "tests/test_install_offline_models.py",
+            "tests/contract/test_cli_scan_bytes_v42.py",
+            "eval/results/v42/longdoc-p95.{json,md}",
+            "dist/{SBOM.cdx.json,provenance.json,SHA256SUMS,acceptance-report.json} (local-only)"
+          ]
         }
       ]
     }

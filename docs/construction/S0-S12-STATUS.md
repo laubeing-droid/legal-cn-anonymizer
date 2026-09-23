@@ -19,6 +19,7 @@ Status values: `PENDING`, `IN_PROGRESS`, `COMPLETED_LOCAL`, `CLOSED_BLOCK_EXTERN
 | S11 | COMPLETED_LOCAL | JC privacy facts (anonymizer side); JC-side adapter in juris-calculus |
 | S12 | COMPLETED_LOCAL | wheel/sdist, onedir, model pack, SBOM, provenance, SHA256SUMS, acceptance report |
 | V42-R1 | COMPLETED_LOCAL | plan-v4.2 卡05生产轨：Presidio transformers 中文NER上线、CLUENER/GLiNER2 实测竞速、异构复核v2收据、IF-07覆盖声明+scan_bytes、九步处置服务（详见下表与 STATUS.json） |
+| V42-R2 | COMPLETED_LOCAL | 桥契约三件（pii_scan/ingest/handoff-manifest）、发布工件重建（19 schema 进 wheel + 新 extras + 模型再分发记录）、离线装机脚本、CLI scan-bytes、1000 中文字符长文双口径 p95 基准（详见下节与 STATUS.json） |
 
 ## V42-R1 (plan-v4.2 card 05) — 2026-09-23
 
@@ -84,3 +85,75 @@ report and STATUS.json with their real fail-closed paths.
 
 Evidence: test suites under `tests/` (207 tests), `dist/acceptance-report.json`,
 `dist/SHA256SUMS`, `dist/provenance.json`. `dist/` itself is local-only (gitignored).
+
+## V42-R2 (HANDOFF debt ledger) — 2026-09-23
+
+Baseline `cd7a811` (V42-R1 handoff), tree clean. All work against the frozen
+bridge contract (`jusbench-repo/bridge/jusbench_bridge/providers.py`, read-only,
+never modified). Wave commits, in order: `51d15e8` → `a50ac65` → `86a49ad` →
+`a4da664` → `d9eb15e`.
+
+1. **Bridge contract trio** (`51d15e8`): `pii_scan_service.scan_release_payload`
+   (report shaped to frozen `scan-bytes-report-v1`; every exception carries a
+   `.code` string; timeout/model_missing/unsupported-profile are visible
+   degradations; never an egress receipt), `ingest_service`
+   (`ingest_submit/_status/_cancel/_resume` over per-job ledgers; read-only
+   snapshots — digests/sizes/formats only, contents never enter the ledger;
+   `hash_mismatch` fail-closed on resume), and `build_harness_handoff` now
+   accepts the bridge's `manifest=` kwarg (validated against the frozen
+   resolver field closure, unknown fields refused fail-closed, verified bundle
+   facts stamped on this side; `manifest=None` keeps prior behavior).
+   21 synthetic tests in the exact bridge call shapes over real
+   registry/ledger/signature chains.
+2. **Release artifacts rebuilt** (`a50ac65`): the 19 generated contract
+   schemas now ship in wheel+sdist (package-data; previously missing from
+   wheels), SBOM covers the presidio/ner-race/markitdown extras (26
+   components) and hash-locks all 19 schemas as dataAssets,
+   THIRD_PARTY_NOTICES.md gains redistribution records for CLUENER RoBERTa
+   (MIT), GLiNER medium-v2.1 / gliner2-base (Apache-2.0) and zh_core_web_sm
+   (MIT). Rebuilt wheel/sdist/SBOM/provenance/SHA256SUMS/acceptance-report
+   locally: 19 schemas verified in-wheel, zero weight files,
+   `verify_no_private_artifacts` + `verify_distribution` PASS, final
+   `LOCAL_RC_WITH_EXTERNAL_BLOCKERS`. `dist/` stays local (gitignored).
+6. **Offline model install** (`86a49ad`): `scripts/install_offline_models.py`
+   installs an offline pack (dir/zip, `models/` layout) and verifies the
+   `models/manifest.json` hash locks in full (no short-circuit: every
+   missing/hash_mismatch/size_mismatch named, exit 1). The repo's own
+   manifest is the trust anchor — a pack cannot silently re-pin its own
+   hashes (`--accept-manifest` required to re-pin). Zip-slip guarded. Zero
+   network; wheels still carry no weights. Real-repo run: 3 locked assets,
+   2.81 GB, PASS.
+7. **CLI scan-bytes** (`a4da664`): `vault-engine scan-bytes INFILE|-` drives
+   `scan_bytes_service` with strict request construction; report to stdout or
+   `-o`; exit 0 only on complete coverage; never an egress receipt.
+8. **Long-document latency** (`d9eb15e`): `eval/longdoc_benchmark.py`, exact
+   1000-CJK synthetic contract, methodology identical to
+   `eval/evaluate_release.py`. TWO readings recorded: raw single-shot p95
+   88.3 ms is NOT the gate — `spacy_huggingface_pipelines` silently skips NER
+   annotation beyond CLUENER's 512-token budget, so only rules run; chunked
+   full coverage (3 × ≤450 CJK, serial sum) p50 221.3 / p95 310.5 ms with
+   22 vs 20 detections confirming real NER contribution. Gate (1000 chars
+   p95 ≤ 2 s): **PASS on the chunked basis**. The unmodified path's silent
+   NER coverage loss on long docs is a named boundary; fixing it is an
+   NER-behavior change requiring separate adjudication.
+
+Items recorded as adjudication/other-repo evidence only (nothing touched):
+
+- **Item 3 (person gate)**: personRecall 21/34 = 61.8% < 90% stands as
+  measured in V42-R1; the three candidate routes (deterministic party rules /
+  user-dictionary operations / fine-tune or swap) await user adjudication;
+  the 0.90 threshold itself was NOT changed.
+- **Item 4 (card discrepancy)**: plan-v4.2 card 05-4 cites a pre-existing
+  W15c-A `tests/jusbench/test_disposal.py` (13 cases) that does not exist
+  anywhere in this repo or the product checkout; V42-R1 shipped the product
+  nine-step test directly. The card-side premise needs correction on the
+  card owner's side.
+- **Item 5 (egress gates in other repos)**: EgressReceipt issuance and
+  `trustedConfigCheck` production enforcement belong to the 01 main process;
+  consumer-side refusals (jobs.py/trust.py/pii.py) live outside this repo.
+  The A side carries only the test reference implementation — deliberately
+  not re-implemented here.
+
+Full-suite regression: `python -B -m pytest -q -p no:cacheprovider tests` →
+**286 passed / 0 failed** (`reports/v42/regression.xml`; 248 baseline + 38
+new). `git diff --check` clean per wave.
