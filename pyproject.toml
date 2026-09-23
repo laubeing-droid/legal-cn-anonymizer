@@ -68,6 +68,9 @@ Upstream = "https://github.com/fishonbike/vault-engine"
 [tool.setuptools]
 packages = { find = { where = ["src"], include = ["legal_anonymizer*"] } }
 
+[tool.setuptools.package-data]
+"legal_anonymizer.contracts.schemas" = ["*.json"]
+
 [tool.setuptools.dynamic]
 version = { attr = "legal_anonymizer.__version__" }
 

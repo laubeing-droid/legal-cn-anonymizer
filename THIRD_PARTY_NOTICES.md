@@ -15,6 +15,26 @@
 | zxing-cpp/zxing-cpp | Apache-2.0 | QR / DataMatrix / PDF417 decoding |
 | Python Software Foundation | PSF-2.0 | Python runtime |
 
+## Model redistribution records (card 05, V42-R1/R2)
+
+No model weights are committed to git or shipped inside the wheel/sdist/onedir;
+weights live under `models/ner/` (gitignored), hash-locked per file in
+`models/manifest.json → ner.release_models` (revision + sha256). The records
+below cover the weights this project redistributes in its offline model pack:
+
+| Model / asset | License | Usage |
+|---|---|---|
+| uer/roberta-base-finetuned-cluener2020-chinese @ `cddd8fc2` (CLUENER-finetuned RoBERTa) | MIT (model weights by ydli-bgoc/UnionLab; verified on the HF model card) | Production Chinese NER (transformers token-classification engine) |
+| urchade/gliner_medium-v2.1 @ `40ec4193` | Apache-2.0 | Heterogeneous independent verifier (zero-shot counterexample check) |
+| fastino/gliner2-base-v1 @ `79c3a777` | Apache-2.0 | NER race candidate only (lost the race; kept hash-locked for reproduction, not loaded by production) |
+| zh_core_web_sm 3.8.0 (spaCy Chinese pipeline) | MIT | Chinese tokenization for the transformers NER engine (via presidio `zh_core_web_sm` tokenizers) |
+
+Governing packages loaded around these weights: `presidio-analyzer` 2.2.x
+(MIT), `spacy` 3.8.x (MIT), `transformers` 4.x (Apache-2.0), `gliner` 0.2.x
+(MIT), `gliner2` 2.x (Apache-2.0). The `gliner` and `gliner2` packages are
+never interchangeable load targets: `gliner` loads only
+`urchade/gliner_medium-v2.1`, `gliner2` loads only `fastino/gliner2-base-v1`.
+
 Explicitly excluded from distribution dependencies: PyMuPDF (AGPL) — not vendored,
 not bundled. If a future high-fidelity vector PDF engine is added it must go through
 a separate license decision (user-installed, separate process adapter, AGPL release,
