@@ -258,7 +258,11 @@ def _classify_cells(lines: list[dict]) -> list[dict]:
     for row in rows:
         row["cells"].sort(key=lambda c: c["bbox"][0])
         amounts = sum(1 for c in row["cells"] if _AMT_RE.fullmatch(c["text"]))
-        if len(row["cells"]) >= _TABLE_MIN_CELLS and amounts >= _TABLE_MIN_AMOUNTS:
+        # 数据行＝≥4 格且 ≥2 金额；合计行（日期列无墨＋「合计」格可能漏识别）
+        # ＝≥3 格且 ≥3 金额。两者都入账，缺格在组装期按列位留空。
+        if (len(row["cells"]) >= _TABLE_MIN_CELLS
+                and amounts >= _TABLE_MIN_AMOUNTS) or \
+                (len(row["cells"]) >= 3 and amounts >= 3):
             table_rows.append({
                 "page_row_index": len(table_rows),
                 "cells": row["cells"],
@@ -546,10 +550,13 @@ def _column_medians(group_rows: list[list[dict]]) -> list[float]:
 
 
 def table_rows(state_root: Path, batch_id: str, doc_id: str) -> dict:
-    """跨页表阅读序组装：同卷连续表页 → 一组，行序=(页,页内行)。
+    """跨页表阅读序组装：行序=(页,页内行)；组边界＝期次重置。
 
-    列位由满列行各槽位 x 心中位数定位（缺格=空位，不编造文本）；金额保持
-    字符串原样（整分纪律在语料侧，本面不改写数值）。
+    连续表页先按页邻接成串，再按**期次重置**切组（可信期次=1-2 位整数且
+    置信 ≥ 阈；上一可信期次>1 后又见可信 1 ＝ 新表开始）——语料/实务中
+    同卷相邻页可各属不同表，页邻接本身不足以定界。列位由满列行各槽位
+    x 心中位数定位（缺格=空位，不编造文本）；金额保持字符串原样（整分
+    纪律在语料侧，本面不改写数值）。
     """
     batch, bdir = _load_batch(state_root, batch_id)
     doc = next((d for d in batch["documents"] if d["doc_id"] == doc_id), None)
@@ -564,21 +571,35 @@ def table_rows(state_root: Path, batch_id: str, doc_id: str) -> dict:
         record = json.loads(ppath.read_text(encoding="utf-8"))
         if record.get("table_rows"):
             pages_data.append((page, record["table_rows"]))
-    groups, current = [], None
+    run_rows: list[tuple[int, dict]] = []
     for page, rows in pages_data:
-        if current is not None and page == current["pages"][-1] + 1:
-            current["pages"].append(page)
-            current["rows"].extend((page, r) for r in rows)
-        else:
-            current = {"pages": [page], "rows": [(page, r) for r in rows]}
-            groups.append(current)
+        run_rows.extend((page, r) for r in rows)
+
+    groups: list[list[tuple[int, dict]]] = []
+    prev_installment: int | None = None
+    for entry in run_rows:
+        page, row = entry
+        col0 = next((c for c in row["cells"]
+                     if c["text"] and _INT_RE.fullmatch(c["text"])), None)
+        trusted = (col0 is not None
+                   and col0["conf"] >= LOW_CONFIDENCE_THRESHOLD)
+        installment = int(col0["text"]) if trusted else None
+        if (trusted and installment == 1 and prev_installment is not None
+                and prev_installment > 1):
+            groups.append([])             # 期次重置＝新表
+        elif not groups:
+            groups.append([])
+        groups[-1].append(entry)
+        if trusted:
+            prev_installment = installment
+
     out_groups = []
     for gi, group in enumerate(groups):
         row_cells = [sorted(r["cells"], key=lambda c: c["bbox"][0])
-                     for _, r in group["rows"]]
+                     for _, r in group]
         medians = _column_medians(row_cells)
         out_rows = []
-        for (page, row), cells in zip(group["rows"], row_cells):
+        for (page, row), cells in zip(group, row_cells):
             slots: list[dict | None] = [None] * len(medians)
             for cell in cells:
                 xc = (cell["bbox"][0] + cell["bbox"][2]) / 2
@@ -595,9 +616,10 @@ def table_rows(state_root: Path, batch_id: str, doc_id: str) -> dict:
                 "page_row_index": row["page_row_index"],
                 "cells": slots,
             })
+        pages_seq = sorted({page for page, _ in group})
         out_groups.append({
             "group_index": gi,
-            "pages": [group["pages"][0], group["pages"][-1]],
+            "pages": [pages_seq[0], pages_seq[-1]],
             "columns": len(medians),
             "rows": out_rows,
         })

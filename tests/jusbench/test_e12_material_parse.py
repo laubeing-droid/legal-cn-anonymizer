@@ -300,34 +300,60 @@ class TestTableAssembly:
     def _cell(text, x, y):
         return {"text": text, "bbox": [x, y, x + 100, y + 40], "conf": 0.99}
 
-    def _state_with_tables(self, tmp_path):
+    def _state_with_tables(self, tmp_path, adjacent=False):
         corpus = _write_corpus(tmp_path, [
             ({"doc_id": "doc_0001"}, [_white_png()] * 3)])
         reg = register_batch(tmp_path, corpus)
         bdir = tmp_path / "material-parse" / reg["batch_id"]
-        pages = {
-            # 页1：3 行（行1 跨到页2 续）；页2 隔开（断组）；页3：续表
-            1: [
-                {"page_row_index": 0, "cells": [
-                    self._cell("1", 86, 220), self._cell("2026-02-05", 184, 220),
-                    self._cell("100.00", 364, 220), self._cell("20.00", 544, 220),
-                    self._cell("120.00", 724, 220)]},
-                {"page_row_index": 1, "cells": [
-                    self._cell("2", 86, 284), self._cell("2026-03-05", 184, 284),
-                    self._cell("100.00", 364, 284), self._cell("18.00", 544, 284),
-                    self._cell("118.00", 724, 284)]},
-            ],
-            3: [
-                {"page_row_index": 0, "cells": [
-                    self._cell("3", 86, 220), self._cell("2026-04-05", 184, 220),
-                    self._cell("100.00", 364, 220), self._cell("16.00", 544, 220),
-                    self._cell("116.00", 724, 220)]},
-                {"page_row_index": 1, "cells": [
-                    # 合计行：期次列放「合计」，日期列缺格
-                    self._cell("合计", 86, 284), self._cell("300.00", 364, 284),
-                    self._cell("54.00", 544, 284), self._cell("354.00", 724, 284)]},
-            ],
-        }
+        if adjacent:
+            pages = {
+                # 页1 表A（期次 1,2）；页2 表B（期次重置 1,2）——相邻不同表
+                1: [
+                    {"page_row_index": 0, "cells": [
+                        self._cell("1", 86, 220), self._cell("2026-02-05", 184, 220),
+                        self._cell("100.00", 364, 220), self._cell("20.00", 544, 220),
+                        self._cell("120.00", 724, 220)]},
+                    {"page_row_index": 1, "cells": [
+                        self._cell("2", 86, 284), self._cell("2026-03-05", 184, 284),
+                        self._cell("100.00", 364, 284), self._cell("18.00", 544, 284),
+                        self._cell("118.00", 724, 284)]},
+                ],
+                2: [
+                    {"page_row_index": 0, "cells": [
+                        self._cell("1", 86, 220), self._cell("2027-01-05", 184, 220),
+                        self._cell("200.00", 364, 220), self._cell("30.00", 544, 220),
+                        self._cell("230.00", 724, 220)]},
+                    {"page_row_index": 1, "cells": [
+                        self._cell("2", 86, 284), self._cell("2027-02-05", 184, 284),
+                        self._cell("200.00", 364, 284), self._cell("28.00", 544, 284),
+                        self._cell("228.00", 724, 284)]},
+                ],
+            }
+        else:
+            pages = {
+                # 页1 表（期次 1,2）；页2 隔开（无表行）；页3 期次 3＋合计行
+                1: [
+                    {"page_row_index": 0, "cells": [
+                        self._cell("1", 86, 220), self._cell("2026-02-05", 184, 220),
+                        self._cell("100.00", 364, 220), self._cell("20.00", 544, 220),
+                        self._cell("120.00", 724, 220)]},
+                    {"page_row_index": 1, "cells": [
+                        self._cell("2", 86, 284), self._cell("2026-03-05", 184, 284),
+                        self._cell("100.00", 364, 284), self._cell("18.00", 544, 284),
+                        self._cell("118.00", 724, 284)]},
+                ],
+                3: [
+                    {"page_row_index": 0, "cells": [
+                        self._cell("3", 86, 220), self._cell("2026-04-05", 184, 220),
+                        self._cell("100.00", 364, 220), self._cell("16.00", 544, 220),
+                        self._cell("116.00", 724, 220)]},
+                    # 合计行：日期列缺墨＋「合计」格漏识别（仅 3 金额格）
+                    {"page_row_index": 1, "cells": [
+                        self._cell("300.00", 364, 284),
+                        self._cell("54.00", 544, 284),
+                        self._cell("354.00", 724, 284)]},
+                ],
+            }
         for page, rows in pages.items():
             rec = {"schema": mp.SCHEMA, "batch_id": reg["batch_id"],
                    "doc_id": "doc_0001", "page": page, "signal": "READ_OK",
@@ -341,21 +367,71 @@ class TestTableAssembly:
                                  sort_keys=True).encode("utf-8"))
         return reg["batch_id"]
 
-    def test_reading_order_across_pages_and_gap_breaks_group(self, tmp_path):
+    def test_reading_order_continues_across_gap_and_keeps_total_row(self, tmp_path):
+        # 期次连续跨隔页＝同一表；合计行仅 3 金额格也入账（缺格=空位）
         bid = self._state_with_tables(tmp_path)
         out = table_rows(tmp_path, bid, "doc_0001")
-        assert len(out["groups"]) == 2          # 页2 无表 → 断组
-        g1, g2 = out["groups"]
-        assert g1["pages"] == [1, 1] and g2["pages"] == [3, 3]
-        assert g1["columns"] == 5 and g2["columns"] == 5
+        assert len(out["groups"]) == 1
+        g1 = out["groups"][0]
+        assert g1["pages"] == [1, 3] and g1["columns"] == 5
         assert [(r["page"], r["page_row_index"]) for r in g1["rows"]] == \
-            [(1, 0), (1, 1)]
+            [(1, 0), (1, 1), (3, 0), (3, 1)]
         texts = [[c["text"] if c else None for c in r["cells"]] for r in g1["rows"]]
         assert texts[0] == ["1", "2026-02-05", "100.00", "20.00", "120.00"]
-        g2_texts = [[c["text"] if c else None for c in r["cells"]]
-                    for r in g2["rows"]]
-        assert g2_texts[0] == ["3", "2026-04-05", "100.00", "16.00", "116.00"]
-        assert g2_texts[1] == ["合计", None, "300.00", "54.00", "354.00"]  # 缺格=空位
+        assert texts[3] == [None, None, "300.00", "54.00", "354.00"]
+
+    def test_adjacent_tables_split_on_installment_reset(self, tmp_path):
+        # 相邻页两表（期次重置）＝两组，不是按页邻接并组
+        bid = self._state_with_tables(tmp_path, adjacent=True)
+        out = table_rows(tmp_path, bid, "doc_0001")
+        assert len(out["groups"]) == 2
+        assert out["groups"][0]["pages"] == [1, 1]
+        assert out["groups"][1]["pages"] == [2, 2]
+        assert len(out["groups"][0]["rows"]) == 2
+        first_b = [c["text"] if c else None
+                   for c in out["groups"][1]["rows"][0]["cells"]]
+        assert first_b == ["1", "2027-01-05", "200.00", "30.00", "230.00"]
+
+    def test_low_confidence_installment_does_not_split_or_break(self, tmp_path):
+        # 低置信「1」（如实测合计→'1'@0.635）不作期次证据：不切组不乱序
+        corpus = _write_corpus(tmp_path, [
+            ({"doc_id": "doc_0001"}, [_white_png(), _white_png(992, 1400)])])
+        reg = register_batch(tmp_path, corpus)
+        bdir = tmp_path / "material-parse" / reg["batch_id"]
+        pages = {
+            1: [
+                {"page_row_index": 0, "cells": [
+                    self._cell("1", 86, 220), self._cell("2026-02-05", 184, 220),
+                    self._cell("100.00", 364, 220), self._cell("20.00", 544, 220),
+                    self._cell("120.00", 724, 220)]},
+                {"page_row_index": 1, "cells": [
+                    self._cell("2", 86, 284), self._cell("2026-03-05", 184, 284),
+                    self._cell("100.00", 364, 284), self._cell("18.00", 544, 284),
+                    self._cell("118.00", 724, 284)]},
+            ],
+            2: [
+                # 表尾合计行：期次列被误读为低置信 '1'（0.5）＋3 金额格
+                {"page_row_index": 0, "cells": [
+                    {"text": "1", "bbox": [86, 220, 186, 260], "conf": 0.5},
+                    self._cell("300.00", 364, 220),
+                    self._cell("54.00", 544, 220),
+                    self._cell("354.00", 724, 220)]},
+            ],
+        }
+        from legal_anonymizer.security.safe_storage import atomic_write_bytes
+
+        for page, rows in pages.items():
+            rec = {"schema": mp.SCHEMA, "batch_id": reg["batch_id"],
+                   "doc_id": "doc_0001", "page": page, "signal": "READ_OK",
+                   "table_rows": rows}
+            path = bdir / "pages" / "doc_0001" / f"p{page:04d}.json"
+            path.parent.mkdir(parents=True, exist_ok=True)
+            atomic_write_bytes(
+                path, json.dumps(rec, ensure_ascii=False,
+                                 sort_keys=True).encode("utf-8"))
+        out = table_rows(tmp_path, reg["batch_id"], "doc_0001")
+        assert len(out["groups"]) == 1          # 低置信 1 不触发期次重置
+        assert len(out["groups"][0]["rows"]) == 3
 
     def test_unknown_doc_fails(self, tmp_path):
         bid = self._state_with_tables(tmp_path)
