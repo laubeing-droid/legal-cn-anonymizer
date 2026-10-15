@@ -44,12 +44,23 @@ def _verify_models() -> None:
 
 
 class RapidOcrEngine:
-    def __init__(self):
+    def __init__(self, num_threads: int | None = None):
+        """num_threads caps onnxruntime intra_op threads (None = library
+        default). A FIXED value keeps batch runs deterministic across
+        single- and multi-worker execution; models stay hash-locked."""
         _verify_models()
         try:
             from rapidocr import RapidOCR
 
-            self._engine = RapidOCR()
+            params = None
+            if num_threads is not None:
+                if not isinstance(num_threads, int) or num_threads < 1:
+                    raise OcrUnavailableError("num_threads invalid")
+                params = {"EngineConfig.onnxruntime.intra_op_num_threads":
+                          num_threads}
+            self._engine = RapidOCR(params=params)
+        except OcrUnavailableError:
+            raise
         except Exception as exc:  # noqa: BLE001
             raise OcrUnavailableError(f"RapidOCR init failed: {type(exc).__name__}") from exc
 
