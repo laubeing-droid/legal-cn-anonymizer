@@ -260,3 +260,28 @@ class TestDocxPipeline:
         assert code == 0
         assert (out_dir / "sanitized" / "doc-002.sanitized.docx").exists()
         caps = capsys.readouterr()
+
+    def test_cli_docx_rehydrate_dispatch(self, workspace, tmp_path, capsys):
+        # CLI 面 `rehydrate --matter` + .docx 必须走 rehydrate_docx 分支
+        # （缺陷回归：cmd_rehydrate 顶置 _read() 以 UTF-8 读二进制 docx，
+        # DOCX 分支永远不可达——服务层直调正常，CLI 面必挂）
+        from legal_anonymizer.cli import main
+
+        state_root, out_dir = workspace
+        src = tmp_path / "in" / "合同.docx"
+        src.parent.mkdir()
+        make_docx(src)
+        DocxSanitizeService(state_root).sanitize_docx(
+            "matter-001", src, out_dir, "doc-001", dictionary=DICTIONARY
+        )
+        out_docx = out_dir / "sanitized" / "doc-001.sanitized.docx"
+        restored_path = out_dir / "restored-cli.docx"
+        code = main(["rehydrate", str(out_docx), "--matter", "matter-001",
+                     "--state-dir", str(state_root),
+                     "--out", str(restored_path)])
+        assert code == 0
+        assert "已回填" in capsys.readouterr().err
+        doc = python_docx.Document(str(restored_path))
+        full = "\n".join(p.text for p in doc.paragraphs)
+        assert "张三" in full
+        assert "自然人A" not in full

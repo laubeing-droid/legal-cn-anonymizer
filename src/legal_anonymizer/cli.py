@@ -104,7 +104,6 @@ def cmd_scrub(args: argparse.Namespace) -> int:
 
 
 def cmd_rehydrate(args: argparse.Namespace) -> int:
-    payload = _read(args.infile)
     if getattr(args, "matter", None):
         from .application.rehydrate_service import RehydrateService
 
@@ -114,7 +113,7 @@ def cmd_rehydrate(args: argparse.Namespace) -> int:
                                         Path(args.out or (args.infile + ".restored.docx")))
             print(f"已回填 {result.replacements} 处假名 → {result.output_text}", file=sys.stderr)
             return EXIT_OK
-        result = svc.rehydrate_text(args.matter, payload)
+        result = svc.rehydrate_text(args.matter, _read(args.infile))
         _write(args.out or "-", result.output_text)
         if result.unmatched_aliases:
             print(
@@ -128,6 +127,7 @@ def cmd_rehydrate(args: argparse.Namespace) -> int:
     if not args.map:
         print("✗ rehydrate 需要 --map（legacy）或 --matter（案件级）。", file=sys.stderr)
         return 4
+    payload = _read(args.infile)
     vault = Vault.load(args.map)
     try:                                   # structured reply: rehydrate in place
         obj = json.loads(payload)
