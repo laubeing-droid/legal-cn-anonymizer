@@ -1,0 +1,22 @@
+{
+  "name": "@legal-cn-anonymizer/dsh-bundle",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "legal-cn-anonymizer DSH bundle（四件套：服务 + defineTool + fetch.register + client panel，cases 包样板）：文本面 scrub/rehydrate 经公开 CLI 子进程出线；身份映射永不离开 anonymizer 侧 vault。",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client/client.js",
+    "./package.json": "./package.json"
+  },
+  "license": "Apache-2.0",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web"
+    }
+  }
+}
